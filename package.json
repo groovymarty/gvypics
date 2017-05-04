@@ -15,5 +15,8 @@
   "bugs": {
     "url": "https://github.com/groovymarty/pic/issues"
   },
-  "homepage": "https://github.com/groovymarty/pic#readme"
+  "homepage": "https://github.com/groovymarty/pic#readme",
+  "dependencies": {
+    "dropbox": "^2.5.3"
+  }
 }
