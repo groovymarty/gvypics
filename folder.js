@@ -1,12 +1,13 @@
 var mydbx = require("./mydbx.js");
+var pic = require("./pic.js");
 
-function Folder(parent, item) {
+function Folder(parent, meta, parts) {
   this.parent = parent;
-  this.name = item.name;
-  this.path = item.path_lower;
-  this.dbxId = item.id;
+  this.name = meta.name;
+  this.path = meta.path_lower;
+  this.id = parts.id;
   this.folders = {};
-  console.log("Folder "+this.name+" created");
+  console.log("Folder "+this.id+" created");
 }
 
 Folder.prototype.update = function() {
@@ -24,13 +25,18 @@ Folder.prototype.processListFolderResult = function(result) {
   var self = this;
   result.entries.forEach(function(entry) {
     if (entry['.tag'] === "folder") {
-      if (!(entry.id in self.folders)) {
-        self.folders[entry.id] = new Folder(self, entry);
+      var parts = pic.parseFolder(entry.name);
+      if (parts) {
+        if (!(parts.id in self.folders)) {
+          self.folders[parts.id] = new Folder(self, entry, parts);
+        }
+      } else {
+        console.log("Skipping " + entry.name);
       }
     } else if (entry['.tag'] === "file") {
       // is a file
     } else {
-      console.log("unknown .tag: "+entry['.tag']);
+      console.log("Unknown .tag: "+entry['.tag']);
     }
   });
   if (result.has_more) {

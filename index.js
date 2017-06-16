@@ -7,7 +7,7 @@ var root;
 
 mydbx.filesGetMetadata({path: '/Pictures'})
   .then(function(response) {
-    root = new Folder(null, response);
+    root = new Folder(null, response, {id: "/"});
     root.update().then(function(){console.log("it is finished")});
   })
   .catch(function(error) {
