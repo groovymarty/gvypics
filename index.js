@@ -9,9 +9,10 @@ var root = {};
 mydbx.filesGetMetadata({path: "/Pictures"})
   .then(function(response) {
     root = new Folder(null, response, {id: "/"});
-    root.update()
-      .then(function() {console.log("root update finished"); return root.folders["D17A"].update();})
-      .then(function() {console.log("it is finished");});
+    root.update().then(function() {
+      console.log("root update finished");
+      return true; //done
+    });
   })
   .catch(function(error) {
     console.log(error);
@@ -59,8 +60,10 @@ app.get("/pic/ls/:id", function(req, res) {
       .then(function(folder) {return findChildFolder(folder, parts);})
       .then(function(folder) {
         if (parts.what === 'folder') {
-          res.json(folder.represent());
-          return true; //done
+          folder.possibleUpdate().then(function() {
+            res.json(folder.represent());
+            return true; //done
+          });
         } else {
           var file = folder.files[id];
           if (file) {

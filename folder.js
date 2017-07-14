@@ -77,15 +77,32 @@ Folder.prototype.processListFolderResult = function(result, filesSeen, foldersSe
       });
   }
   return true; //done
-}
+};
+
+Folder.prototype.possibleUpdate = function() {
+  if (this.isEmpty()) {
+    return this.update();
+  } else {
+    // no update needed
+    return Promise.resolve(true);
+  }
+};
 
 Folder.prototype.represent = function() {
   return {
     name: this.name,
     id: this.id,
-    folders: Object.keys(this.folders),
+    folders: Object.keys(this.folders).sort(),
     files: Object.keys(this.files)
   };
-}
+};
+
+Folder.prototype.isEmpty = function() {
+  var f;
+  for (f in this.files) {
+    return false;
+  }
+  return true;
+};
 
 module.exports = Folder;
