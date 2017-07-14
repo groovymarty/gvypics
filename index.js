@@ -1,9 +1,10 @@
 #!/usr/bin/env nodejs
 var fs = require('fs');
 var http = require('http');
+var express = require('express');
 var mydbx = require("./mydbx.js");
 var Folder = require("./folder.js");
-var root;
+var root = {};
 
 mydbx.filesGetMetadata({path: '/Pictures'})
   .then(function(response) {
@@ -16,10 +17,11 @@ mydbx.filesGetMetadata({path: '/Pictures'})
     console.log(error);
   });
 
-http.createServer(function (req, res) {
-  res.writeHead(200, {'Content-Type': 'text/plain'});
-  res.write("This is a test");
-  res.end('Hello World 22\n');
-}).listen(8081, 'localhost');
-console.log('Server running at http://localhost:8081/');
+var app = express();
+app.get('/pic/', function(req, res) {
+  res.send(root.represent());
+});
 
+app.listen(8081, function() {
+  console.log("Server listening on port 8081");
+});

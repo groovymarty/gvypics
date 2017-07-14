@@ -79,4 +79,13 @@ Folder.prototype.processListFolderResult = function(result, filesSeen, foldersSe
   return true; //done
 }
 
+Folder.prototype.represent = function() {
+  return {
+    name: this.name,
+    id: this.id,
+    folders: Object.keys(this.folders),
+    files: Object.keys(this.files)
+  };
+}
+
 module.exports = Folder;
