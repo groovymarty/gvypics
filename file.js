@@ -6,7 +6,7 @@ function File(parent, meta, parts) {
   this.name = meta.name;
   this.dbxid = meta.id;
   this.id = parts.id;
-  console.log("File "+this.id+" created");
+  //console.log("File "+this.id+" created");
 }
 
 File.prototype.represent = function() {

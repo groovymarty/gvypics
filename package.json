@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/groovymarty/pic#readme",
   "dependencies": {
-    "dropbox": "^2.5.3"
+    "dropbox": "^2.5.3",
+    "express": "^4.15.4"
   }
 }

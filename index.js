@@ -5,12 +5,14 @@ var pic = require("./pic.js");
 var mydbx = require("./mydbx.js");
 var Folder = require("./folder.js");
 var root = {};
+var initLoadAll = true;
 
 mydbx.filesGetMetadata({path: "/Pictures"})
   .then(function(response) {
     root = new Folder(null, response, {id: "/"});
-    root.update().then(function() {
+    root.update(initLoadAll).then(function() {
       console.log("root update finished");
+      console.log(root.count(true));
       return true; //done
     });
   })
