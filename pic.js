@@ -1,20 +1,17 @@
-//                parent                 child            sep    comment
-//                |                      |                |      |
-var folderPat = /^([A-Za-z]+\d*[A-Za-z]*)(_?\d*(?:\+\d+)*)([- ]*)(.*)/;
-//                parent                 child             type       z   num       sep    cmnt   ext
-//                |                      |                 |          |   |         |      |      |
-var filePat   = /^([A-Za-z]+\d*[A-Za-z]*)(_?\d*(?:\+\d+)*)-([A-Za-z]*)(0*)([1-9]\d*)([- ]*)([^.]*)(.*)/;
+//                parentBase    parentSfx  child          sep    comment
+//                |1            |2         |3             |4     |5
+var folderPat = /^([A-Za-z]+\d*)([A-Za-z]*)(\d*(?:\+\d+)*)([- ]*)(.*)/;
+//                parentBase    parentSfx  child           type       z   num       sep    cmnt   ext
+//                |1            |2         |3              |4         |5  |6        |7     |8     |9
+var filePat   = /^([A-Za-z]+\d*)([A-Za-z]*)(\d*(?:\+\d+)*)-([A-Za-z]*)(0*)([1-9]\d*)([- ]*)([^.]*)(.*)/;
 
-function cleanup(parts, name) {
-  //mhs temp until underscore usage eliminated
-  if (parts.child.startsWith("_")) {
-    console.log("***** Has underscore: "+name);
-    parts.child = parts.child.substr(1);
-  }
-  // leading plus unnecessary if parent ends with letter
-  if (parts.child.startsWith("+") && isNaN(parts.parent.substr(-1))) {
-    console.log("***** Extra plus: "+name);
-    parts.child = parts.child.substr(1);
+// leading plus unnecessary if parent has suffix (and therefore ends with a letter)
+function trimChild(mr) {
+  if (mr[3].startsWith("+") && mr[2]) {
+    console.log("***** Extra plus: "+mr[0]);
+    return mr[3].substr(1);
+  } else {
+    return mr[3];
   }
 }
 
@@ -22,14 +19,13 @@ function parseFolder(name) {
   var mr = name.match(folderPat);
   if (mr) {
     var parts = {
-      parent: mr[1].toUpperCase(),
-      child: mr[2],
-      sep: mr[3],
-      comment: mr[4],
+      parent: (mr[1] + mr[2]).toUpperCase(),
+      child: trimChild(mr),
+      sep: mr[4],
+      comment: mr[5],
       what: "folder"
     };
     if (parts.sep || !parts.comment) {
-      cleanup(parts, name);
       parts.id = parts.parent + parts.child;
       return parts;
     }
@@ -41,18 +37,17 @@ function parseFile(name) {
   var mr = name.match(filePat);
   if (mr) {
     var parts = {
-      parent: mr[1].toUpperCase(),
-      child: mr[2],
-      type: mr[3].toUpperCase(),
-      zeros: mr[4],
-      num: mr[5],
-      sep: mr[6],
-      comment: mr[7],
-      ext: mr[8].toLowerCase(),
+      parent: (mr[1] + mr[2]).toUpperCase(),
+      child: trimChild(mr),
+      type: mr[4].toUpperCase(),
+      zeros: mr[5],
+      num: mr[6],
+      sep: mr[7],
+      comment: mr[8],
+      ext: mr[9].toLowerCase(),
       what: "file"
     };
     if (parts.sep || !parts.comment) {
-      cleanup(parts, name);
       parts.id = parts.parent + parts.child + "-" + parts.type + parts.num;
       return parts;
     }
