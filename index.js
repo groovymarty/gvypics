@@ -25,32 +25,41 @@ app.get("/pic/ls", function(req, res) {
   res.json(root.represent());
 });
 
-function findParentFolder(parts) {
-  var folder = root.folders[parts.parent];
-  if (folder) {
-    return Promise.resolve(folder);
-  } else {
-    return root.update().then(function() {
-      return root.folders[parts.parent] ||
-        Promise.reject(new Error("Parent folder not found: "+parts.parent));
-    });
-  }
+// find folder from parsed id
+function findFolder(parts) {
+  return findFolder4(root, parts.parent, parts.child, true);
 }
 
-function findChildFolder(parentFolder, parts) {
-  if (parts.child) {
-    var childId = parts.parent + parts.child;
-    var folder = parentFolder.folders[childId];
-    if (folder) {
-      return Promise.resolve(folder);
+// internal function that drills down to child folders
+function findFolder4(curFolder, folderName, childString, tryUpdate) {
+  var folder = curFolder.folders[folderName];
+  if (folder) {
+    // folder found, are we at end of child string?
+    if (childString) {
+      // no, split string at next plus sign after first char
+      // if first char is plus, don't split there
+      var iplus = childString.substr(1).indexOf("+");
+      if (iplus < 0) {
+        // no more plus signs, use entire string
+        iplus = childString.length;
+      } else {
+        // fix index to account for substr(1) above
+        iplus += 1;
+      }
+      // find next child
+      return findFolder4(folder, folderName + childString.substr(0,iplus), childString.substr(iplus), true);
     } else {
-      return parentFolder.update().then(function() {
-        return parentFolder.folders[childId] ||
-          Promise.reject(new Error("Child folder not found: "+childId));
-      });
+      // no more children, we're done
+      return Promise.resolve(folder);
     }
+  } else if (tryUpdate) {
+    // folder not found, update and try again
+    return curFolder.update().then(function() {
+      return findFolder4(curFolder, folderName, childString, false);
+    });
   } else {
-    return Promise.resolve(parentFolder);
+    // folder still not found after updating, give up
+    return Promise.reject(new Error("Folder not found: "+folderName+" in "+curFolder.id));
   }
 }
 
@@ -58,8 +67,7 @@ app.get("/pic/ls/:id", function(req, res) {
   var id = req.params.id;
   var parts = pic.parse(id);
   if (parts) {
-    findParentFolder(parts)
-      .then(function(folder) {return findChildFolder(folder, parts);})
+    findFolder(parts)
       .then(function(folder) {
         if (parts.what === 'folder') {
           folder.possibleUpdate().then(function() {
