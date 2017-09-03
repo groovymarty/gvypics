@@ -6,6 +6,7 @@ function File(parent, meta, parts) {
   this.name = meta.name;
   this.dbxid = meta.id;
   this.id = parts.id;
+  this.num = parts.num;
   //console.log("File "+this.id+" created");
 }
 

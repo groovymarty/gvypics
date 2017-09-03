@@ -41,7 +41,7 @@ function parseFile(name) {
       child: trimChild(mr),
       type: mr[4].toUpperCase(),
       zeros: mr[5],
-      num: mr[6],
+      num: parseInt(mr[6]),
       sep: mr[7],
       comment: mr[8],
       ext: mr[9].toLowerCase(),

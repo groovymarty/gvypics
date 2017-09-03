@@ -8,14 +8,14 @@ function Folder(parent, meta, parts) {
   this.path = meta.path_lower;
   this.id = parts.id;
   this.folders = {};
-  this.files = {};
+  this.pictures = {};
+  this.videos = {};
   //console.log("Folder "+this.id+" created");
 }
 
 Folder.prototype.update = function(recursive) {
   var self = this;
-  var filesSeen = {};
-  var foldersSeen = {};
+  var idsSeen = {};
   
   function processListFolderResult(result) {
     result.entries.forEach(function(entry) {
@@ -23,10 +23,10 @@ Folder.prototype.update = function(recursive) {
       if (entry['.tag'] === "folder") {
         parts = pic.parseFolder(entry.name);
         if (parts) {
-          if (foldersSeen[parts.id]) {
+          if (idsSeen[parts.id]) {
             console.log("***** Dup folder: "+entry.name+" ignored, keeping: "+self.folders[parts.id].name);
           }
-          foldersSeen[parts.id] = true;
+          idsSeen[parts.id] = true;
           if (!(parts.id in self.folders)) {
             self.folders[parts.id] = new Folder(self, entry, parts);
           }
@@ -36,12 +36,24 @@ Folder.prototype.update = function(recursive) {
       } else if (entry['.tag'] === "file") {
         parts = pic.parseFile(entry.name);
         if (parts) {
-          if (filesSeen[parts.id]) {
-            console.log("***** Dup file: "+entry.name+" ignored, keeping: "+self.files[parts.id].name);
-          }
-          filesSeen[parts.id] = true;
-          if (!(parts.id in self.files)) {
-            self.files[parts.id] = new File(self, entry, parts);
+          if (parts.type === "") {
+            if (idsSeen[parts.id]) {
+              console.log("***** Dup picture: "+entry.name+" ignored, keeping: "+self.pictures[parts.id].name);
+            }
+            idsSeen[parts.id] = true;
+            if (!(parts.id in self.pictures)) {
+              self.pictures[parts.id] = new File(self, entry, parts);
+            }
+          } else if (parts.type === "V") {
+            if (idsSeen[parts.id]) {
+              console.log("***** Dup video "+entry.name+" ignored, keeping: "+self.videos[parts.id].name);
+            }
+            idsSeen[parts.id] = true;
+            if (!(parts.id in self.videos)) {
+              self.videos[parts.id] = new File(self, entry, parts);
+            }
+          } else {
+            console.log("**** Ignoring "+entry.name+", unknown type "+parts.type);
           }
         } else {
           //console.log("Skipping " + entry.name);
@@ -65,13 +77,18 @@ Folder.prototype.update = function(recursive) {
     .then(processListFolderResult)
     .then(function() {
       // clean up deleted files and folders
-      var filesNotSeen = Object.keys(self.files).filter(function(id) {return !(id in filesSeen);});
-      filesNotSeen.forEach(function(id) {
-        console.log("File "+id+" deleted");
-        delete self.files[id];
+      var notSeen = Object.keys(self.pictures).filter(function(id) {return !(id in idsSeen);});
+      notSeen.forEach(function(id) {
+        console.log("Picture "+id+" deleted");
+        delete self.pictures[id];
       });
-      var foldersNotSeen = Object.keys(self.folders).filter(function(id) {return !(id in foldersSeen);});
-      foldersNotSeen.forEach(function(id) {
+      notSeen = Object.keys(self.videos).filter(function(id) {return !(id in idsSeen);});
+      notSeen.forEach(function(id) {
+        console.log("Video "+id+" deleted");
+        delete self.videos[id];
+      });
+      notSeen = Object.keys(self.folders).filter(function(id) {return !(id in idsSeen);});
+      notSeen.forEach(function(id) {
         console.log("Folder "+id+" deleted");
         delete self.folders[id];
       });
@@ -99,11 +116,17 @@ Folder.prototype.possibleUpdate = function() {
 };
 
 Folder.prototype.represent = function() {
+  var self = this;
   return {
     name: this.name,
     id: this.id,
     folders: Object.keys(this.folders).sort(),
-    files: Object.keys(this.files)
+    pictures: Object.keys(this.pictures).sort(function(id1, id2) {
+      return self.pictures[id1].num - self.pictures[id2].num;
+    }),
+    videos: Object.keys(this.videos).sort(function(id1, id2) {
+      return self.videos[id1].num - self.videos[id2].num;
+    })
   };
 };
 
