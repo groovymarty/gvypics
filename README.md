@@ -1,2 +1,2 @@
-# pic
-Picture server
+# gvypics
+GroovyMarty Picture server

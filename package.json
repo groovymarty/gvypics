@@ -1,5 +1,5 @@
 {
-  "name": "pic",
+  "name": "gvypics",
   "version": "1.0.0",
   "description": "Groovymarty picture server",
   "main": "index.js",
@@ -8,14 +8,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com/groovymarty/pic.git"
+    "url": "git+ssh://git@github.com/groovymarty/gvypics.git"
   },
   "author": "Marty Sauser",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/groovymarty/pic/issues"
+    "url": "https://github.com/groovymarty/gvypics/issues"
   },
-  "homepage": "https://github.com/groovymarty/pic#readme",
+  "homepage": "https://github.com/groovymarty/gvypics#readme",
   "dependencies": {
     "dropbox": "^2.5.3",
     "express": "^4.15.4"

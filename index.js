@@ -21,7 +21,7 @@ mydbx.filesGetMetadata({path: "/Pictures"})
   });
 
 var app = express();
-app.get("/pic/ls", function(req, res) {
+app.get("/gvypics/ls", function(req, res) {
   res.json(root.represent());
 });
 
@@ -63,7 +63,7 @@ function findFolder4(curFolder, folderName, childString, tryUpdate) {
   }
 }
 
-app.get("/pic/ls/:id", function(req, res) {
+app.get("/gvypics/ls/:id", function(req, res) {
   var id = req.params.id;
   var parts = pic.parse(id);
   if (parts) {
