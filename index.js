@@ -27,40 +27,7 @@ app.get("/gvypics/ls", function(req, res) {
 
 // find folder from parsed id
 function findFolder(parts) {
-  return findFolder4(root, parts.parent, parts.child, true);
-}
-
-// internal function that drills down to child folders
-function findFolder4(curFolder, folderName, childString, tryUpdate) {
-  var folder = curFolder.folders[folderName];
-  if (folder) {
-    // folder found, are we at end of child string?
-    if (childString) {
-      // no, split string at next plus sign after first char
-      // if first char is plus, don't split there
-      var iplus = childString.substr(1).indexOf("+");
-      if (iplus < 0) {
-        // no more plus signs, use entire string
-        iplus = childString.length;
-      } else {
-        // fix index to account for substr(1) above
-        iplus += 1;
-      }
-      // find next child
-      return findFolder4(folder, folderName + childString.substr(0,iplus), childString.substr(iplus), true);
-    } else {
-      // no more children, we're done
-      return Promise.resolve(folder);
-    }
-  } else if (tryUpdate) {
-    // folder not found, update and try again
-    return curFolder.update().then(function() {
-      return findFolder4(curFolder, folderName, childString, false);
-    });
-  } else {
-    // folder still not found after updating, give up
-    return Promise.reject(new Error("Folder not found: "+folderName+" in "+curFolder.id));
-  }
+  return root.findFolder(parts.parent, parts.child, true);
 }
 
 app.get("/gvypics/ls/:id", function(req, res) {

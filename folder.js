@@ -134,4 +134,38 @@ Folder.prototype.count = function(recursive) {
   }
 };
 
+// Find folder with specified name, possibly drilling down to child folders
+Folder.prototype.findFolder = function(folderName, childString, tryUpdate) {
+  var self = this;
+  var folder = this.folders[folderName];
+  if (folder) {
+    // folder found, are we at end of child string?
+    if (childString) {
+      // no, split string at next plus sign after first char
+      // if first char is plus, don't split there
+      var iplus = childString.substr(1).indexOf("+");
+      if (iplus < 0) {
+        // no more plus signs, use entire string
+        iplus = childString.length;
+      } else {
+        // fix index to account for substr(1) above
+        iplus += 1;
+      }
+      // find next child
+      return folder.findFolder(folderName + childString.substr(0,iplus), childString.substr(iplus), true);
+    } else {
+      // no more children, we're done
+      return Promise.resolve(folder);
+    }
+  } else if (tryUpdate) {
+    // folder not found, update and try again
+    return this.update().then(function() {
+      return self.findFolder(folderName, childString, false);
+    });
+  } else {
+    // folder still not found after updating, give up
+    return Promise.reject(new Error("Folder not found: "+folderName+" in "+this.id));
+  }
+};
+
 module.exports = Folder;
