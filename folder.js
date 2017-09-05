@@ -2,6 +2,9 @@ var mydbx = require("./mydbx.js");
 var pic = require("./pic.js");
 var File = require("./file.js");
 
+var freshMs = 30*1000;       //update is fresh for 30 sec
+var staleMs = 6*60*60*1000;  //update is stale after 6 hrs
+
 function Folder(parent, meta, parts) {
   this.parent = parent;
   this.name = meta.name;
@@ -92,6 +95,8 @@ Folder.prototype.update = function(recursive) {
         console.log("Folder "+id+" deleted");
         delete self.folders[id];
       });
+      // set last update time
+      self.lastUpdate = Date.now();
       if (recursive) {
         return Promise.all(Object.keys(self.folders).map(function(id) {
           return self.folders[id].update(true);
@@ -106,8 +111,21 @@ Folder.prototype.update = function(recursive) {
     });
 };
 
+// Update folder if it's been awhile since it was last updated
 Folder.prototype.possibleUpdate = function() {
-  if (this.isEmpty()) {
+  if (!this.lastUpdate || (Date.now() - this.lastUpdate) > staleMs) {
+    // never updated or last update is stale
+    return this.update();
+  } else {
+    // no update needed
+    return Promise.resolve(true);
+  }
+};
+
+// Ensure folder is freshly updated
+Folder.prototype.freshUpdate = function() {
+  if (!this.lastUpdate || (Date.now() - this.lastUpdate) > freshMs) {
+    // ne er updated or not freshly updated
     return this.update();
   } else {
     // no update needed
@@ -141,14 +159,16 @@ Folder.prototype.isEmpty = function() {
 Folder.prototype.count = function(recursive) {
   var self = this;
   var myCount = {
-    numFiles: Object.keys(this.files).length,
-    numFolders: Object.keys(this.folders).length
+    numFolders: Object.keys(this.folders).length,
+    numPictures: Object.keys(this.pictures).length,
+    numVideos: Object.keys(this.videos).length
   };
   if (recursive) {
     return Object.keys(this.folders).reduce(function(accum, id) {
       var subCount = self.folders[id].count(true);
-      accum.numFiles += subCount.numFiles;
       accum.numFolders += subCount.numFolders;
+      accum.numPictures += subCount.numPictures;
+      accum.numVideos += subCount.numVideos;
       return accum;
     }, myCount);
   } else {
@@ -182,12 +202,35 @@ Folder.prototype.findFolder = function(folderName, childString, tryUpdate) {
     }
   } else if (tryUpdate) {
     // folder not found, update and try again
-    return this.update().then(function() {
+    return this.freshUpdate().then(function() {
       return self.findFolder(folderName, childString, false);
     });
   } else {
     // folder still not found after updating, give up
     return Promise.reject(new Error("Folder not found: "+folderName+" in "+this.id));
+  }
+};
+
+Folder.prototype.findFile = function(id, type, tryUpdate) {
+  var self = this;
+  var file = null;
+  if (type === "") {
+    file = this.pictures[id];
+  } else if (type === "V") {
+    file = this.videos[id];
+  } else {
+    return Promise.reject(new Error("Unknown type "+type));
+  }
+  if (file) {
+    return Promise.resolve(file);
+  } else if (tryUpdate) {
+    // file not found, update and try again
+    return this.freshUpdate().then(function() {
+      return self.findFile(id, type, false);
+    });
+  } else {
+    // file still not found after updating, giv up
+    return Promise.reject(new Error("File not found: "+id+" in "+this.id));
   }
 };
 

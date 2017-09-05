@@ -34,36 +34,24 @@ app.get("/gvypics/ls/:id", function(req, res) {
   var id = req.params.id;
   var parts = pic.parse(id);
   if (parts) {
-    findFolder(parts)
-      .then(function(folder) {
-        if (parts.what === 'folder') {
-          folder.possibleUpdate().then(function() {
-            res.json(folder.represent());
-            return true; //done
-          });
-        } else if (parts.what === 'file' && parts.type === "") {
-          var picture = folder.pictures[parts.id];
-          if (picture) {
-            res.json(picture.represent());
-            return true; //done
-          } else {
-            return Promise.reject(new Error("Picture not found: "+parts.id));
-          }
-        } else if (parts.what === 'file' && parts.type === "V") {
-          var video = folder.videos[parts.id];
-          if (video) {
-            res.json(video.represent());
-            return true; //done
-          } else {
-            return Promise.reject(new Error("Video not found: "+parts.id));
-          }
-        } else {
-          res.status(404).send("Can't handle what="+parts.what+" type="+parts.type);
-        }
-      })
-      .catch(function(error) {
-        res.status(404).send(error.message);
-      });
+    findFolder(parts).then(function(folder) {
+      if (parts.what === 'folder') {
+        return folder.possibleUpdate().then(function() {
+          res.json(folder.represent());
+          return true; //done
+        });
+      } else if (parts.what === 'file') {
+        return folder.findFile(parts.id, parts.type, true).then(function(file) {
+          res.json(file.represent());
+          return true; //done
+        });
+      } else {
+        res.status(404).send("Can't handle what="+parts.what+" type="+parts.type);
+      }
+    })
+    .catch(function(error) {
+      res.status(404).send(error.message);
+    });
   } else {
     res.status(404).send("Parse failed for "+id);
   }
