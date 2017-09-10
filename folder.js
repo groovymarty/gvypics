@@ -39,21 +39,15 @@ Folder.prototype.update = function(recursive) {
       } else if (entry['.tag'] === "file") {
         parts = pic.parseFile(entry.name);
         if (parts) {
-          if (parts.type === "") {
+          var typeInfo = File.typeInfo[parts.type];
+          if (typeInfo) {
+            var container = self[typeInfo.containerName];
             if (idsSeen[parts.id]) {
-              console.log("***** Dup picture: "+entry.name+" ignored, keeping: "+self.pictures[parts.id].name);
+              console.log("***** Dup "+typeInfo.name+": "+entry.name+" ignored, keeping: "+container[parts.id].name);
             }
             idsSeen[parts.id] = true;
-            if (!(parts.id in self.pictures)) {
-              self.pictures[parts.id] = new File(self, entry, parts);
-            }
-          } else if (parts.type === "V") {
-            if (idsSeen[parts.id]) {
-              console.log("***** Dup video "+entry.name+" ignored, keeping: "+self.videos[parts.id].name);
-            }
-            idsSeen[parts.id] = true;
-            if (!(parts.id in self.videos)) {
-              self.videos[parts.id] = new File(self, entry, parts);
+            if (!(parts.id in container)) {
+              container[parts.id] = new File(self, entry, parts);
             }
           } else {
             console.log("**** Ignoring "+entry.name+", unknown type "+parts.type);
@@ -72,25 +66,23 @@ Folder.prototype.update = function(recursive) {
     }
     return true; //done
   }
+  
+  function cleanupDeleted(container, what) {
+    var notSeen = Object.keys(container).filter(function(id) {return !(id in idsSeen);});
+    notSeen.forEach(function(id) {
+      console.log(what+" "+id+" deleted");
+      delete container[id];
+    });
+  }
 
   return mydbx.filesListFolder({path: this.path})
     .then(processListFolderResult)
     .then(function() {
       // clean up deleted files and folders
-      var notSeen = Object.keys(self.pictures).filter(function(id) {return !(id in idsSeen);});
-      notSeen.forEach(function(id) {
-        console.log("Picture "+id+" deleted");
-        delete self.pictures[id];
-      });
-      notSeen = Object.keys(self.videos).filter(function(id) {return !(id in idsSeen);});
-      notSeen.forEach(function(id) {
-        console.log("Video "+id+" deleted");
-        delete self.videos[id];
-      });
-      notSeen = Object.keys(self.folders).filter(function(id) {return !(id in idsSeen);});
-      notSeen.forEach(function(id) {
-        console.log("Folder "+id+" deleted");
-        delete self.folders[id];
+      cleanupDeleted(self.folders, "folder");
+      Object.keys(File.typeInfo).forEach(function(type) {
+        var typeInfo = File.typeInfo[type];
+        cleanupDeleted(self[typeInfo.containerName], typeInfo.name);
       });
       // set last update time
       self.lastUpdate = Date.now();
@@ -208,10 +200,9 @@ Folder.prototype.findFolder = function(folderName, childString, tryUpdate) {
 Folder.prototype.findFile = function(id, type, tryUpdate) {
   var self = this;
   var file = null;
-  if (type === "") {
-    file = this.pictures[id];
-  } else if (type === "V") {
-    file = this.videos[id];
+  var typeInfo = File.typeInfo[type];
+  if (typeInfo) {
+    file = this[typeInfo.containerName][id];
   } else {
     return Promise.reject(new Error("Unknown type "+type));
   }
