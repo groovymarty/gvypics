@@ -193,7 +193,7 @@ Folder.prototype.findFolder = function(folderName, childString, tryUpdate) {
     });
   } else {
     // folder still not found after updating, give up
-    return Promise.reject(new Error("Folder not found: "+folderName+" in "+this.id));
+    throw new Error("Folder not found: "+folderName+" in "+this.id);
   }
 };
 
@@ -204,7 +204,7 @@ Folder.prototype.findFile = function(id, type, tryUpdate) {
   if (typeInfo) {
     file = this[typeInfo.containerName][id];
   } else {
-    return Promise.reject(new Error("Unknown type "+type));
+    throw new Error("Unknown type "+type);
   }
   if (file) {
     return Promise.resolve(file);
@@ -214,8 +214,8 @@ Folder.prototype.findFile = function(id, type, tryUpdate) {
       return self.findFile(id, type, false);
     });
   } else {
-    // file still not found after updating, giv up
-    return Promise.reject(new Error("File not found: "+id+" in "+this.id));
+    // file still not found after updating, give up
+    throw new Error("File not found: "+id+" in "+this.id);
   }
 };
 

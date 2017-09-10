@@ -4,29 +4,49 @@ var express = require('express');
 var pic = require("./pic.js");
 var mydbx = require("./mydbx.js");
 var Folder = require("./folder.js");
+var File = require("./file.js");
 var root = {};
 var initLoadAll = true;
+var cacheBaseDir = "./cache";
 
-mydbx.filesGetMetadata({path: "/Pictures"})
-  .then(function(response) {
-    root = new Folder(null, response, {id: "/"});
-    return root.update(initLoadAll).then(function() {
-      console.log("root update finished");
-      console.log(root.count(true));
+if (!fs.existsSync(cacheBaseDir)) {
+  fs.mkdirSync(cacheBaseDir);
+}
+File.setCacheBaseDir(cacheBaseDir);
+
+function getErrorMessage(error) {
+  if (error.message) {
+    return error.message;
+  } else if (error.error) {
+    return error.error;
+  } else {
+    console.log(error);
+    return "An error happened!";
+  }
+}
+
+mydbx.filesGetMetadata({path: "/Pictures"}).then(function(response) {
+  root = new Folder(null, response, {id: "/"});
+  return root.update(initLoadAll).then(function() {
+    console.log("root update finished");
+    console.log(root.count(true));
+    return true; //done
+  });
+})
+.catch(function(error) {
+  console.log(getErrorMessage(error));
+});
+
+var app = express();
+app.get("/gvypics/ls", function(req, res) {
+  Promise.resolve(true).then(function() {
+    return root.possibleUpdate().then(function() {
+      res.json(root.represent());
       return true; //done
     });
   })
   .catch(function(error) {
-    console.log(error);
-  });
-
-var app = express();
-app.get("/gvypics/ls", function(req, res) {
-  root.possibleUpdate().then(function() {
-    res.json(root.represent());  
-  })
-  .catch(function(error) {
-    res.status(404).send(error.message);
+    res.status(404).send(getErrorMessage(error));
   });
 });
 
@@ -40,30 +60,60 @@ function findFile(folder, parts) {
 }
 
 app.get("/gvypics/ls/:id", function(req, res) {
-  var id = req.params.id;
-  var parts = pic.parse(id);
-  if (parts) {
-    findFolder(parts).then(function(folder) {
-      if (parts.what === 'folder') {
-        return folder.possibleUpdate().then(function() {
-          res.json(folder.represent());
-          return true; //done
-        });
-      } else if (parts.what === 'file') {
-        return findFile(folder, parts).then(function(file) {
-          res.json(file.represent());
-          return true; //done
+  Promise.resolve(true).then(function() {
+    var id = req.params.id;
+    var parts = pic.parse(id);
+    if (parts) {
+      return findFolder(parts).then(function(folder) {
+        if (parts.what === 'folder') {
+          return folder.possibleUpdate().then(function() {
+            res.json(folder.represent());
+            return true; //done
+          });
+        } else if (parts.what === 'file') {
+          return findFile(folder, parts).then(function(file) {
+            res.json(file.represent());
+            return true; //done
+          });
+        } else {
+          throw new Error("Can't handle what="+parts.what);
+        }
+      });
+    } else {
+      throw new Error("Parse failed for "+id);
+    }
+  })
+  .catch(function(error) {
+    res.status(404).send(getErrorMessage(error));
+  });
+});
+
+app.get("/gvypics/pic/:id", function(req, res) {
+  Promise.resolve(true).then(function() {
+    var id = req.params.id;
+    var parts = pic.parseFile(id);
+    if (parts) {
+      if (parts.type === "") {
+        return findFolder(parts).then(function(folder) {
+          return findFile(folder, parts).then(function(file) {
+            console.log("attempting to download "+file.dbxid); //mhs temp
+            return mydbx.filesDownload({path: "id:"+file.dbxid}).then(function(result) {
+              console.log(result);
+              res.json(result);
+              return true; //done
+            });
+          });
         });
       } else {
-        throw new Error("Can't handle what="+parts.what);
+        throw new Error("Not a picture: "+id);
       }
-    })
-    .catch(function(error) {
-      res.status(404).send(error.message);
-    });
-  } else {
-    res.status(404).send("Parse failed for "+id);
-  }
+    } else {
+      throw new Error("Parse failed for "+id);
+    }
+  })
+  .catch(function(error) {
+    res.status(404).send(getErrorMessage(error));
+  });
 });
 
 app.listen(8081, function() {

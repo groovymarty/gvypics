@@ -1,14 +1,18 @@
 var mydbx = require("./mydbx.js");
 var pic = require("./pic.js");
+var fs = require('fs');
+var path = require('path');
 
 var typeInfo = {
   "": {
     name: "picture",
-    containerName: "pictures"
+    containerName: "pictures",
+    cacheDirName: "pictures"
   },
   "V": {
     name: "video",
-    containerName: "videos"
+    containerName: "videos",
+    cacheDirName: "videos"
   }
 };
 
@@ -29,5 +33,18 @@ File.prototype.represent = function() {
 };
 
 File.typeInfo = typeInfo;
+
+var cacheBaseDir;
+
+File.setCacheBaseDir = function(baseDir) {
+  cacheBaseDir = baseDir;
+  Object.keys(typeInfo).forEach(function(type) {
+    var tinfo = typeInfo[type];
+    tinfo.cacheDir = path.join(baseDir, tinfo.cacheDirName);
+    if (!fs.existsSync(tinfo.cacheDir)) {
+      fs.mkdirSync(tinfo.cacheDir);
+    }
+  });
+}
 
 module.exports = File;
