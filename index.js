@@ -10,7 +10,7 @@ var initLoadAll = true;
 mydbx.filesGetMetadata({path: "/Pictures"})
   .then(function(response) {
     root = new Folder(null, response, {id: "/"});
-    root.update(initLoadAll).then(function() {
+    return root.update(initLoadAll).then(function() {
       console.log("root update finished");
       console.log(root.count(true));
       return true; //done
@@ -22,12 +22,21 @@ mydbx.filesGetMetadata({path: "/Pictures"})
 
 var app = express();
 app.get("/gvypics/ls", function(req, res) {
-  res.json(root.represent());
+  root.possibleUpdate().then(function() {
+    res.json(root.represent());  
+  })
+  .catch(function(error) {
+    res.status(404).send(error.message);
+  });
 });
 
-// find folder from parsed id
+// find folder or file from parsed id
 function findFolder(parts) {
   return root.findFolder(parts.parent, parts.child, true);
+}
+
+function findFile(folder, parts) {
+  return folder.findFile(parts.id, parts.type, true);
 }
 
 app.get("/gvypics/ls/:id", function(req, res) {
@@ -41,12 +50,12 @@ app.get("/gvypics/ls/:id", function(req, res) {
           return true; //done
         });
       } else if (parts.what === 'file') {
-        return folder.findFile(parts.id, parts.type, true).then(function(file) {
+        return findFile(folder, parts).then(function(file) {
           res.json(file.represent());
           return true; //done
         });
       } else {
-        res.status(404).send("Can't handle what="+parts.what+" type="+parts.type);
+        throw new Error("Can't handle what="+parts.what);
       }
     })
     .catch(function(error) {

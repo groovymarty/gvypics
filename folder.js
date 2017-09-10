@@ -68,10 +68,7 @@ Folder.prototype.update = function(recursive) {
     if (result.has_more) {
       // return another promise to keep chain going
       return mydbx.fileListFolderContinue({cursor: result.cursor})
-        .then(processListFolderResult)
-        .catch(function(error) {
-          console.log(error);
-        });
+        .then(processListFolderResult);
     }
     return true; //done
   }
@@ -105,9 +102,6 @@ Folder.prototype.update = function(recursive) {
         // not recursive
         return true; //done
       }
-    })
-    .catch(function(error) {
-      console.log(error);
     });
 };
 
