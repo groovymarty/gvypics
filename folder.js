@@ -39,15 +39,20 @@ Folder.prototype.update = function(recursive) {
       } else if (entry['.tag'] === "file") {
         parts = pic.parseFile(entry.name);
         if (parts) {
-          var typeInfo = File.typeInfo[parts.type];
-          if (typeInfo) {
-            var container = self[typeInfo.containerName];
-            if (idsSeen[parts.id]) {
-              console.log("***** Dup "+typeInfo.name+": "+entry.name+" ignored, keeping: "+container[parts.id].name);
-            }
-            idsSeen[parts.id] = true;
-            if (!(parts.id in container)) {
-              container[parts.id] = new File(self, entry, parts);
+          var tinfo = File.typeInfo[parts.type];
+          if (tinfo) {
+            var mime = tinfo.extToMime[parts.ext];
+            if (mime) {
+              var container = self[tinfo.containerName];
+              if (idsSeen[parts.id]) {
+                console.log("***** Dup "+tinfo.name+": "+entry.name+" ignored, keeping: "+container[parts.id].name);
+              }
+              idsSeen[parts.id] = true;
+              if (!(parts.id in container)) {
+                container[parts.id] = new File(self, entry, parts, mime);
+              }
+            } else {
+              console.log("**** Ignoring "+entry.name+", unknown ext "+parts.ext);
             }
           } else {
             console.log("**** Ignoring "+entry.name+", unknown type "+parts.type);

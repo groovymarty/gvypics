@@ -96,16 +96,42 @@ app.get("/gvypics/pic/:id", function(req, res) {
       if (parts.type === "") {
         return findFolder(parts).then(function(folder) {
           return findFile(folder, parts).then(function(file) {
-            console.log("attempting to download "+file.dbxid); //mhs temp
-            return mydbx.filesDownload({path: "id:"+file.dbxid}).then(function(result) {
-              console.log(result);
-              res.json(result);
+            return mydbx.filesDownload({path: file.dbxid}).then(function(result) {
+              res.set("Content-Type", file.mime);
+              res.end(result.fileBinary, 'binary');
               return true; //done
             });
           });
         });
       } else {
         throw new Error("Not a picture: "+id);
+      }
+    } else {
+      throw new Error("Parse failed for "+id);
+    }
+  })
+  .catch(function(error) {
+    res.status(404).send(getErrorMessage(error));
+  });
+});
+
+app.get("/gvypics/vid/:id", function(req, res) {
+  Promise.resolve(true).then(function() {
+    var id = req.params.id;
+    var parts = pic.parseFile(id);
+    if (parts) {
+      if (parts.type === "V") {
+        return findFolder(parts).then(function(folder) {
+          return findFile(folder, parts).then(function(file) {
+            return mydbx.filesDownload({path: file.dbxid}).then(function(result) {
+              res.set("Content-Type", file.mime);
+              res.end(result.fileBinary, 'binary');
+              return true; //done
+            });
+          });
+        });
+      } else {
+        throw new Error("Not a video: "+id);
       }
     } else {
       throw new Error("Parse failed for "+id);

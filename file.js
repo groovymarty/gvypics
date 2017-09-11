@@ -7,21 +7,35 @@ var typeInfo = {
   "": {
     name: "picture",
     containerName: "pictures",
-    cacheDirName: "pictures"
+    cacheDirName: "pictures",
+    extToMime: {
+      ".jpg": "image/jpeg",
+      ".jpeg": "image/jpeg",
+      ".gif": "image/gif",
+      ".png": "image/png"
+    }
   },
   "V": {
     name: "video",
     containerName: "videos",
-    cacheDirName: "videos"
+    cacheDirName: "videos",
+    extToMime: {
+      ".mp4": "video/mp4",
+      ".mov": "video/quicktime",
+      ".avi": "video/x-msvideo",
+      ".wmv": "video/x-ms-wmv",
+      ".3gp": "video/3gpp"
+    }
   }
 };
 
-function File(parent, meta, parts) {
+function File(parent, meta, parts, mime) {
   this.parent = parent;
   this.name = meta.name;
   this.dbxid = meta.id;
   this.id = parts.id;
   this.num = parts.num;
+  this.mime = mime;
   //console.log("File "+this.id+" created");
 }
 
