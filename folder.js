@@ -28,10 +28,11 @@ Folder.prototype.update = function(recursive) {
         if (parts) {
           if (idsSeen[parts.id]) {
             console.log("***** Dup folder: "+entry.name+" ignored, keeping: "+self.folders[parts.id].name);
-          }
-          idsSeen[parts.id] = true;
-          if (!(parts.id in self.folders)) {
-            self.folders[parts.id] = new Folder(self, entry, parts);
+          } else {
+            idsSeen[parts.id] = true;
+            if (!(parts.id in self.folders)) {
+              self.folders[parts.id] = new Folder(self, entry, parts);
+            }
           }
         } else {
           //console.log("Skipping " + entry.name);
@@ -46,10 +47,11 @@ Folder.prototype.update = function(recursive) {
               var container = self[tinfo.containerName];
               if (idsSeen[parts.id]) {
                 console.log("***** Dup "+tinfo.name+": "+entry.name+" ignored, keeping: "+container[parts.id].name);
-              }
-              idsSeen[parts.id] = true;
-              if (!(parts.id in container)) {
-                container[parts.id] = new File(self, entry, parts, mime);
+              } else {
+                idsSeen[parts.id] = true;
+                if (!(parts.id in container)) {
+                  container[parts.id] = new File(self, entry, parts, mime);
+                }
               }
             } else {
               console.log("**** Ignoring "+entry.name+", unknown ext "+parts.ext);
@@ -86,8 +88,8 @@ Folder.prototype.update = function(recursive) {
       // clean up deleted files and folders
       cleanupDeleted(self.folders, "folder");
       Object.keys(File.typeInfo).forEach(function(type) {
-        var typeInfo = File.typeInfo[type];
-        cleanupDeleted(self[typeInfo.containerName], typeInfo.name);
+        var tinfo = File.typeInfo[type];
+        cleanupDeleted(self[tinfo.containerName], tinfo.name);
       });
       // set last update time
       self.lastUpdate = Date.now();
@@ -116,7 +118,7 @@ Folder.prototype.possibleUpdate = function() {
 // Ensure folder is freshly updated
 Folder.prototype.freshUpdate = function() {
   if (!this.lastUpdate || (Date.now() - this.lastUpdate) > freshMs) {
-    // ne er updated or not freshly updated
+    // never updated or not freshly updated
     return this.update();
   } else {
     // no update needed
@@ -204,23 +206,22 @@ Folder.prototype.findFolder = function(folderName, childString, tryUpdate) {
 
 Folder.prototype.findFile = function(id, type, tryUpdate) {
   var self = this;
-  var file = null;
-  var typeInfo = File.typeInfo[type];
-  if (typeInfo) {
-    file = this[typeInfo.containerName][id];
+  var tinfo = File.typeInfo[type];
+  if (tinfo) {
+    var file = this[tinfo.containerName][id];
+    if (file) {
+      return Promise.resolve(file);
+    } else if (tryUpdate) {
+      // file not found, update and try again
+      return this.freshUpdate().then(function() {
+        return self.findFile(id, type, false);
+      });
+    } else {
+      // file still not found after updating, give up
+      throw new Error("File not found: "+id+" in "+this.id);
+    }
   } else {
     throw new Error("Unknown type "+type);
-  }
-  if (file) {
-    return Promise.resolve(file);
-  } else if (tryUpdate) {
-    // file not found, update and try again
-    return this.freshUpdate().then(function() {
-      return self.findFile(id, type, false);
-    });
-  } else {
-    // file still not found after updating, give up
-    throw new Error("File not found: "+id+" in "+this.id);
   }
 };
 
