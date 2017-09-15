@@ -1,7 +1,6 @@
 #!/usr/bin/env nodejs
 var fs = require('fs');
 var express = require('express');
-var request = require('request');
 var pic = require("./pic.js");
 var mydbx = require("./mydbx.js");
 var Folder = require("./folder.js");
@@ -89,14 +88,6 @@ app.get("/gvypics/ls/:id", function(req, res) {
   });
 });
 
-var charsToEncode = /[\u007f-\uffff]/g;
-
-function httpHeaderSafeJson(args) {
-  return JSON.stringify(args).replace(charsToEncode, function (c) {
-    return '\\u' + ('000' + c.charCodeAt(0).toString(16)).slice(-4);
-  });
-}
-
 app.get("/gvypics/pic/:id", function(req, res) {
   Promise.resolve(true).then(function() {
     var id = req.params.id;
@@ -105,26 +96,8 @@ app.get("/gvypics/pic/:id", function(req, res) {
       if (parts.type === "") {
         return findFolder(parts).then(function(folder) {
           return findFile(folder, parts).then(function(file) {
-            request.post({
-              url: "https://content.dropboxapi.com/2/files/download",
-              headers: {
-                "Authorization": "Bearer "+mydbx.getAccessToken(),
-                "Dropbox-API-Arg": httpHeaderSafeJson({path: file.dbxid})
-              }
-            })
-            .on('response', function(res) {
-              res.headers["Content-Type"] = file.mime;
-              delete res.headers['dropbox-api-result'];
-              Object.keys(res.headers).forEach(function(name) {
-                if (name.toLowerCase().startsWith("x-")) {
-                  delete res.headers[name];
-                }
-              });
-            })
-            .on('error', function(err) {
-              console.log(err);
-            })
-            .pipe(res);
+            file.requestDownload().pipe(res);
+            return true; //done
           });
         });
       } else {
@@ -147,26 +120,8 @@ app.get("/gvypics/vid/:id", function(req, res) {
       if (parts.type === "V") {
         return findFolder(parts).then(function(folder) {
           return findFile(folder, parts).then(function(file) {
-            request.post({
-              url: "https://content.dropboxapi.com/2/files/download",
-              headers: {
-                "Authorization": "Bearer "+mydbx.getAccessToken(),
-                "Dropbox-API-Arg": httpHeaderSafeJson({path: file.dbxid})
-              }
-            })
-            .on('response', function(res) {
-              res.headers["Content-Type"] = file.mime;
-              delete res.headers['dropbox-api-result'];
-              Object.keys(res.headers).forEach(function(name) {
-                if (name.toLowerCase().startsWith("x-")) {
-                  delete res.headers[name];
-                }
-              });
-            })
-            .on('error', function(err) {
-              console.log(err);
-            })
-            .pipe(res);
+            file.requestDownload().pipe(res);
+            return true; //done
           });
         });
       } else {

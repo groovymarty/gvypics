@@ -2,6 +2,7 @@ var mydbx = require("./mydbx.js");
 var pic = require("./pic.js");
 var fs = require('fs');
 var path = require('path');
+var request = require('request');
 
 var typeInfo = {
   "": {
@@ -59,6 +60,41 @@ File.setCacheBaseDir = function(baseDir) {
       fs.mkdirSync(tinfo.cacheDir);
     }
   });
+};
+
+// stolen from Dropbox SDK..
+var charsToEncode = /[\u007f-\uffff]/g;
+
+function httpHeaderSafeJson(args) {
+  return JSON.stringify(args).replace(charsToEncode, function (c) {
+    return '\\u' + ('000' + c.charCodeAt(0).toString(16)).slice(-4);
+  });
 }
+
+// Request file download and return readable stream
+// Note we roll our own request instead of using Dropbox SDK
+// Dropbox SDK buffers the whole file and does not support streaming
+File.prototype.requestDownload = function() {
+  var self = this;
+  return request.post("https://content.dropboxapi.com/2/files/download", {
+    headers: {
+      "Authorization": "Bearer "+mydbx.getAccessToken(),
+      "Dropbox-API-Arg": httpHeaderSafeJson({path: this.dbxid})
+    }
+  })
+  .on('response', function(res) {
+    // clean up headers that we won't want to pass along
+    res.headers["Content-Type"] = self.mime;
+    delete res.headers['dropbox-api-result'];
+    Object.keys(res.headers).forEach(function(name) {
+      if (name.toLowerCase().startsWith("x-")) {
+        delete res.headers[name];
+      }
+    });
+  })
+  .on('error', function(err) {
+    console.log(err);
+  });
+};
 
 module.exports = File;
