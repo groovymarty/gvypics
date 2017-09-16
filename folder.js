@@ -87,7 +87,7 @@ Folder.prototype.update = function(recursive) {
     .then(function() {
       // clean up deleted files and folders
       cleanupDeleted(self.folders, "folder");
-      Object.keys(File.typeInfo).forEach(function(type) {
+      File.types.forEach(function(type) {
         var tinfo = File.typeInfo[type];
         cleanupDeleted(self[tinfo.containerName], tinfo.name);
       });

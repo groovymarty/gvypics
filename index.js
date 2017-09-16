@@ -96,7 +96,8 @@ app.get("/gvypics/pic/:id", function(req, res) {
       if (parts.type === "") {
         return findFolder(parts).then(function(folder) {
           return findFile(folder, parts).then(function(file) {
-            file.requestDownload().pipe(res);
+            res.set("Content-Type", file.mime.name);
+            file.readStream().pipe(res);
             return true; //done
           });
         });
@@ -120,7 +121,8 @@ app.get("/gvypics/vid/:id", function(req, res) {
       if (parts.type === "V") {
         return findFolder(parts).then(function(folder) {
           return findFile(folder, parts).then(function(file) {
-            file.requestDownload().pipe(res);
+            res.set("Content-Type", file.mime.name);
+            file.readStream().pipe(res);
             return true; //done
           });
         });
