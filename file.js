@@ -85,15 +85,34 @@ File.prototype.cachePath = function() {
 // Return read stream for file
 // If file is in cache return file stream, else request download
 File.prototype.readStream = function() {
+  var self = this;
   var cachePath = this.cachePath();
+  var cachePathTmp = cachePath + "_tmp";
   if (fs.existsSync(cachePath)) {
-    console.log("returning "+this.id+" from cache");
     return fs.createReadStream(cachePath);
-    // todo headers?
   } else {
-    console.log("downloading "+this.id);
     var rs = this.requestDownload();
-    var ws = fs.createWriteStream(cachePath);
+    var ws = fs.createWriteStream(cachePathTmp, {flags: "wx"});
+    rs.on('error', function() {
+      console.log("download "+self.id+" failed, removing temp file");
+      try {
+        ws.end();
+        fs.unlinkSync(cachePathTmp);
+      } catch (e) {}
+    });
+    ws.on('error', function(err) {
+      // If two requests for same file collide, one will get EEXIST error
+      // Ignore error and let the other request continue to write file
+      if (err.code !== "EEXIST") {
+        console.log("write failed for "+self.id+", removing temp file");
+        try {
+          fs.unlinkSync(cachePathTmp);
+        } catch (e) {}
+      }
+    });
+    ws.on('finish', function() {
+      fs.renameSync(cachePathTmp, cachePath);
+    });
     rs.pipe(ws);
     return rs;
   }
