@@ -87,35 +87,86 @@ File.prototype.cachePath = function() {
 File.prototype.readStream = function() {
   var self = this;
   var cachePath = this.cachePath();
-  var cachePathTmp = cachePath + "_tmp";
-  if (fs.existsSync(cachePath)) {
-    return fs.createReadStream(cachePath);
-  } else {
-    var rs = this.requestDownload();
-    var ws = fs.createWriteStream(cachePathTmp, {flags: "wx"});
-    rs.on('error', function() {
-      console.log("download "+self.id+" failed, removing temp file");
+  var cachePathTmp;
+  var somethingWentWrong = false;
+  var rs, ws;
+
+  // all-purpose cleanup function
+  function cleanup(what) {
+    somethingWentWrong = true;
+    if (what.all || what.rs) {
+      try {
+        rs.end();
+      } catch(e) {}
+    }
+    if (what.all || what.ws) {
       try {
         ws.end();
+      } catch (e) {}
+    }
+    if (what.all || what.tmp) {
+      try {
         fs.unlinkSync(cachePathTmp);
       } catch (e) {}
+    }
+  }
+  
+  if (fs.existsSync(cachePath)) {
+    //console.log(this.id+" found in cache");
+    rs= fs.createReadStream(cachePath);
+    rs.on('error', function() {
+      console.log("read "+self.id+" failed, cleaning up");
+      cleanup({rs: 1});
     });
+    rs.on('stop', function() {
+      console.log("read "+self.id+" stopped, cleaning up");
+      cleanup({rs: 1});
+    });
+    //rs.on('end', function() {
+    //  console.log("read "+self.id+" ended");
+    //});
+  } else {
+    //console.log(this.id+" not in cache, downloading");
+    rs = this.requestDownload();
+    cachePathTmp = cachePath + "_tmp";
+    ws = fs.createWriteStream(cachePathTmp, {flags: "wx"});
+    rs.on('error', function() {
+      console.log("download "+self.id+" failed, cleaning up");
+      cleanup({all: 1});
+    });
+    rs.on('stop', function() {
+      console.log("download "+self.id+" stopped, cleaning up");
+      cleanup({all: 1});
+    });
+    //rs.on('end', function() {
+    //  console.log("download "+self.id+" ended");
+    //});
     ws.on('error', function(err) {
       // If two requests for same file collide, one will get EEXIST error
       // Ignore error and let the other request continue to write file
-      if (err.code !== "EEXIST") {
-        console.log("write failed for "+self.id+", removing temp file");
-        try {
-          fs.unlinkSync(cachePathTmp);
-        } catch (e) {}
+      if (err.code === "EEXIST") {
+        console.log("ignoring EEXIST for "+cachePathTmp);
+        cleanup({ws: 1});
+      } else {
+        console.log("write failed for "+cachePathTmp+", cleaning up");
+        cleanup({ws: 1, tmp: 1});
       }
     });
-    ws.on('finish', function() {
-      fs.renameSync(cachePathTmp, cachePath);
+    ws.on('unpipe', function() {
+      console.log("unpipe for "+cachePathTmp+", cleaning up");
+      cleanup({ws: 1, tmp: 1});
     });
+    ws.on('finish', function() {
+      if (!somethingWentWrong) {
+        fs.renameSync(cachePathTmp, cachePath);
+      }
+    });
+    //ws.on('end', function() {
+    //  console.log("write "+cachePathTmp+" ended");
+    //});
     rs.pipe(ws);
-    return rs;
   }
+  return rs;
 };
 
 // stolen from Dropbox SDK..
@@ -153,7 +204,7 @@ File.prototype.requestDownload = function() {
     });
   })
   .on('error', function(err) {
-    console.log(err);
+    console.log("from requestDownload post request", err);
   });
 };
 

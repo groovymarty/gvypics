@@ -122,7 +122,12 @@ app.get("/gvypics/vid/:id", function(req, res) {
         return findFolder(parts).then(function(folder) {
           return findFile(folder, parts).then(function(file) {
             res.set("Content-Type", file.mime.name);
-            file.readStream().pipe(res);
+            var rs = file.readStream();
+            // for videos, tell read stream to stop if our connection gets closed
+            req.on('close', function() {
+              rs.emit('stop');
+            });
+            rs.pipe(res);
             return true; //done
           });
         });
