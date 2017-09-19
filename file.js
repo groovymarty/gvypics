@@ -208,4 +208,24 @@ File.prototype.requestDownload = function() {
   });
 };
 
+var thumbnailSizes = {
+  'sm': "w128h128",
+  'md': "w640h480",
+  'lg': "w1024h768"
+};
+
+File.prototype.getThumbnail = function(size) {
+  var dbxsz = thumbnailSizes[size];
+  if (dbxsz) {
+    return mydbx.filesGetThumbnail({
+      path: this.dbxid,
+      size: dbxsz
+    }).then(function(result) {
+      return result.fileBinary;
+    });
+  } else {
+    throw new Error("Unknown size: "+size);
+  }
+};
+
 module.exports = File;

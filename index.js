@@ -96,9 +96,17 @@ app.get("/gvypics/pic/:id", function(req, res) {
       if (parts.type === "") {
         return findFolder(parts).then(function(folder) {
           return findFile(folder, parts).then(function(file) {
-            res.set("Content-Type", file.mime.name);
-            file.readStream().pipe(res);
-            return true; //done
+            if (req.query.sz) {
+              return file.getThumbnail(req.query.sz).then(function(data) {
+                res.set("Content-Type", "image/jpeg");
+                res.end(data, 'binary');
+                return true; //done
+              });
+            } else {
+              res.set("Content-Type", file.mime.name);
+              file.readStream().pipe(res);
+              return true; //done
+            }
           });
         });
       } else {
