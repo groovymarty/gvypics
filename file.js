@@ -40,6 +40,36 @@ types.forEach(function(type) {
   });
 });
 
+var sizeInfo = {
+  'sm': {dbxsz: "w128h128"}, //cacheDir added later, see setCacheBaseDir()
+  'md': {dbxsz: "w640h480"},
+  'lg': {dbxsz: "w1024h768"}
+};
+
+var sizes = Object.keys(sizeInfo);
+
+var cacheBaseDir;
+
+// Called at startup with cache base directory
+// Create cache dirs for each type and store path in tinfo object
+function setCacheBaseDir(baseDir) {
+  cacheBaseDir = baseDir;
+  types.forEach(function(type) {
+    var tinfo = typeInfo[type];
+    tinfo.cacheDir = path.join(baseDir, tinfo.cacheDirName);
+    if (!fs.existsSync(tinfo.cacheDir)) {
+      fs.mkdirSync(tinfo.cacheDir);
+    }
+  });
+  sizes.forEach(function(size) {
+    var szinfo = sizeInfo[size];
+    szinfo.cacheDir = path.join(baseDir, "pic-"+size);
+    if (!fs.existsSync(szinfo.cacheDir)) {
+      fs.mkdirSync(szinfo.cacheDir);
+    }
+  });
+}
+
 function File(parent, meta, parts, mime) {
   this.parent = parent;
   this.name = meta.name;
@@ -60,33 +90,21 @@ File.prototype.represent = function() {
 
 File.typeInfo = typeInfo;
 File.types = types;
-
-var cacheBaseDir;
-
-// Called at startup with cache base directory
-// Create cache dirs for each type and store path in tinfo object
-File.setCacheBaseDir = function(baseDir) {
-  cacheBaseDir = baseDir;
-  types.forEach(function(type) {
-    var tinfo = typeInfo[type];
-    tinfo.cacheDir = path.join(baseDir, tinfo.cacheDirName);
-    if (!fs.existsSync(tinfo.cacheDir)) {
-      fs.mkdirSync(tinfo.cacheDir);
-    }
-  });
-};
+File.sizeInfo = sizeInfo;
+File.sizes = sizes;
+File.setCacheBaseDir = setCacheBaseDir;
 
 // Return cache file path for this file
 // Cache file name includes id and revision
-File.prototype.cachePath = function() {
-  return path.join(this.mime.tinfo.cacheDir, this.id+"_"+this.rev);
+File.prototype.cachePath = function(cacheDir) {
+  return path.join(cacheDir, this.id+"_"+this.rev);
 };
 
 // Return read stream for file
 // If file is in cache return file stream, else request download
 File.prototype.readStream = function() {
   var self = this;
-  var cachePath = this.cachePath();
+  var cachePath = this.cachePath(this.mime.tinfo.cacheDir);
   var cachePathTmp;
   var somethingWentWrong = false;
   var rs, ws;
@@ -114,33 +132,27 @@ File.prototype.readStream = function() {
   if (fs.existsSync(cachePath)) {
     //console.log(this.id+" found in cache");
     rs= fs.createReadStream(cachePath);
-    rs.on('error', function() {
-      console.log("read "+self.id+" failed, cleaning up");
+    rs.on('error', function(err) {
+      console.log("read failed with "+err.code+" for "+self.id+", cleaning up");
       cleanup({rs: 1});
     });
     rs.on('stop', function() {
       console.log("read "+self.id+" stopped, cleaning up");
       cleanup({rs: 1});
     });
-    //rs.on('end', function() {
-    //  console.log("read "+self.id+" ended");
-    //});
   } else {
     //console.log(this.id+" not in cache, downloading");
     rs = this.requestDownload();
     cachePathTmp = cachePath + "_tmp";
     ws = fs.createWriteStream(cachePathTmp, {flags: "wx"});
-    rs.on('error', function() {
-      console.log("download "+self.id+" failed, cleaning up");
+    rs.on('error', function(err) {
+      console.log("download failed with "+err.code+" for "+self.id+", cleaning up");
       cleanup({all: 1});
     });
     rs.on('stop', function() {
       console.log("download "+self.id+" stopped, cleaning up");
       cleanup({all: 1});
     });
-    //rs.on('end', function() {
-    //  console.log("download "+self.id+" ended");
-    //});
     ws.on('error', function(err) {
       // If two requests for same file collide, one will get EEXIST error
       // Ignore error and let the other request continue to write file
@@ -148,7 +160,7 @@ File.prototype.readStream = function() {
         console.log("ignoring EEXIST for "+cachePathTmp);
         cleanup({ws: 1});
       } else {
-        console.log("write failed for "+cachePathTmp+", cleaning up");
+        console.log("write failed with "+err.code+" for "+cachePathTmp+", cleaning up");
         cleanup({ws: 1, tmp: 1});
       }
     });
@@ -156,14 +168,11 @@ File.prototype.readStream = function() {
       console.log("unpipe for "+cachePathTmp+", cleaning up");
       cleanup({ws: 1, tmp: 1});
     });
-    ws.on('finish', function() {
+    ws.on('close', function() {
       if (!somethingWentWrong) {
         fs.renameSync(cachePathTmp, cachePath);
       }
     });
-    //ws.on('end', function() {
-    //  console.log("write "+cachePathTmp+" ended");
-    //});
     rs.pipe(ws);
   }
   return rs;
@@ -182,7 +191,6 @@ function httpHeaderSafeJson(args) {
 // Note we roll our own request instead of using Dropbox SDK
 // Dropbox SDK buffers the whole file and does not support streaming
 File.prototype.requestDownload = function() {
-  var self = this;
   return request.post("https://content.dropboxapi.com/2/files/download", {
     headers: {
       "Authorization": "Bearer "+mydbx.getAccessToken(),
@@ -208,21 +216,76 @@ File.prototype.requestDownload = function() {
   });
 };
 
-var thumbnailSizes = {
-  'sm': "w128h128",
-  'md': "w640h480",
-  'lg': "w1024h768"
-};
+// Promise version of fs.readFile()
+function readFilePromise(path) {
+  return new Promise(function(resolve, reject) {
+    fs.readFile(path, function(err, data) {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(data);
+      }
+    });
+  });
+}
+
+// Write data to file, using a temporary file and renaming at end
+// Action is asynchronous and cleans up after itself
+function writeFileAsyncWithRename(path, data) {
+  var pathTmp = path + "_tmp";
+  var somethingWentWrong = false;
+  var cleanupTmpFile = true;
+  var ws = fs.createWriteStream(pathTmp, {flags: "wx"});
+
+  // what do to if something goes wrong
+  ws.on('error', function(err) {
+    somethingWentWrong = true;
+    // if EEXIST another request must be writing same file, don't delete temp file
+    if (err.code === "EEXIST") {
+      console.log("ignoring EEXIST for "+pathTmp);
+      cleanupTmpFile = false;
+    } else {
+      console.log("async write failed with "+err.code+" for "+pathTmp);
+    }    
+  });
+  
+  // what to do when write finishes
+  ws.on('close', function() {
+    if (!somethingWentWrong) {
+      fs.renameSync(pathTmp, path); //success
+    } else {
+      // failure, cleanup our temp file
+      if (cleanupTmpFile) {
+        try {
+          fs.unlink(pathTmp);
+        } catch (e) {}
+      }
+    }
+  });
+  
+  // write the data, note stream is always ended here
+  ws.end(data, 'binary');
+}
 
 File.prototype.getThumbnail = function(size) {
-  var dbxsz = thumbnailSizes[size];
-  if (dbxsz) {
-    return mydbx.filesGetThumbnail({
-      path: this.dbxid,
-      size: dbxsz
-    }).then(function(result) {
-      return result.fileBinary;
-    });
+  var szinfo = sizeInfo[size];
+  if (szinfo) {
+    var cachePath = this.cachePath(szinfo.cacheDir);
+    if (fs.existsSync(cachePath)) {
+      // return from cache
+      return readFilePromise(cachePath);
+    } else {
+      // not found in cache, request from dropbox
+      return mydbx.filesGetThumbnail({
+        path: this.dbxid,
+        size: szinfo.dbxsz
+      }).then(function(result) {
+        // write to cache (async)
+        writeFileAsyncWithRename(cachePath, result.fileBinary);
+        // return to caller without waiting for write to finish
+        return result.fileBinary;
+      });
+    }
   } else {
     throw new Error("Unknown size: "+size);
   }
