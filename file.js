@@ -100,6 +100,12 @@ File.prototype.cachePath = function(cacheDir) {
   return path.join(cacheDir, this.id+"_"+this.rev);
 };
 
+// Touch access time to indicate recent use
+function touchFile(path) {
+  var nowSec = Math.trunc(Date.now()/1000);
+  fs.utimes(path, nowSec, nowSec);
+}
+
 // Return read stream for file
 // If file is in cache return file stream, else request download
 File.prototype.readStream = function() {
@@ -131,6 +137,7 @@ File.prototype.readStream = function() {
   
   if (fs.existsSync(cachePath)) {
     //console.log(this.id+" found in cache");
+    touchFile(cachePath);
     rs= fs.createReadStream(cachePath);
     rs.on('error', function(err) {
       console.log("read failed with "+err.code+" for "+self.id+", cleaning up");
@@ -272,7 +279,8 @@ File.prototype.getThumbnail = function(size) {
   if (szinfo) {
     var cachePath = this.cachePath(szinfo.cacheDir);
     if (fs.existsSync(cachePath)) {
-      // return from cache
+      // return from cache, touch the mod time to indicate recent use
+      touchFile(cachePath);
       return readFilePromise(cachePath);
     } else {
       // not found in cache, request from dropbox
