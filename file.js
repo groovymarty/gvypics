@@ -1,14 +1,16 @@
-var mydbx = require("./mydbx.js");
 var fs = require('fs');
 var path = require('path');
 var request = require('request');
+var mydbx = require("./mydbx.js");
+var Cache = require("./cache.js");
 
 var typeInfo = {
   "": {
     name: "picture",
     containerName: "pictures",
     cacheDirName: "pictures",
-    //cacheDir added later, see setCacheBaseDir()
+    cacheMaxFiles: 30,
+    //cacheDir and cache added by makeCacheDir()
     extToMime: {
       ".jpg": {name: "image/jpeg"}, //tinfo pointer added below to each mime
       ".jpeg": {name: "image/jpeg"},
@@ -20,6 +22,7 @@ var typeInfo = {
     name: "video",
     containerName: "videos",
     cacheDirName: "videos",
+    cacheMaxFiles: 5,
     extToMime: {
       ".mp4": {name: "video/mp4"},
       ".mov": {name: "video/quicktime"},
@@ -41,32 +44,45 @@ types.forEach(function(type) {
 });
 
 var sizeInfo = {
-  'sm': {dbxsz: "w128h128"}, //cacheDir added later, see setCacheBaseDir()
-  'md': {dbxsz: "w640h480"},
-  'lg': {dbxsz: "w1024h768"}
+  'sm': {
+    dbxsz: "w128h128",
+    cacheDirName: "pic-sm",
+    cacheMaxFiles: 100
+    //cacheDir and cache added by makeCacheDir()
+  },
+  'md': {
+    dbxsz: "w640h480",
+    cacheDirName: "pic-md",
+    cacheMaxFiles: 100
+  },
+  'lg': {
+    dbxsz: "w1024h768",
+    cacheDirName: "pic-lg",
+    cacheMaxFiles: 100
+  }
 };
 
 var sizes = Object.keys(sizeInfo);
 
 var cacheBaseDir;
 
+// Make cache directory and cache manager for specified info object
+function makeCacheDir(info) {
+  info.cacheDir = path.join(cacheBaseDir, info.cacheDirName);
+  if (!fs.existsSync(info.cacheDir)) {
+    fs.mkdirSync(info.cacheDir);
+  }
+  info.cache = new Cache(info.cacheDir, info.cacheMaxFiles);
+}
+
 // Called at startup with cache base directory
-// Create cache dirs for each type and store path in tinfo object
 function setCacheBaseDir(baseDir) {
   cacheBaseDir = baseDir;
   types.forEach(function(type) {
-    var tinfo = typeInfo[type];
-    tinfo.cacheDir = path.join(baseDir, tinfo.cacheDirName);
-    if (!fs.existsSync(tinfo.cacheDir)) {
-      fs.mkdirSync(tinfo.cacheDir);
-    }
+    makeCacheDir(typeInfo[type]);
   });
   sizes.forEach(function(size) {
-    var szinfo = sizeInfo[size];
-    szinfo.cacheDir = path.join(baseDir, "pic-"+size);
-    if (!fs.existsSync(szinfo.cacheDir)) {
-      fs.mkdirSync(szinfo.cacheDir);
-    }
+    makeCacheDir(sizeInfo[size]);
   });
 }
 
@@ -94,10 +110,10 @@ File.sizeInfo = sizeInfo;
 File.sizes = sizes;
 File.setCacheBaseDir = setCacheBaseDir;
 
-// Return cache file path for this file
+// Return cache file name for this file
 // Cache file name includes id and revision
-File.prototype.cachePath = function(cacheDir) {
-  return path.join(cacheDir, this.id+"_"+this.rev);
+File.prototype.cacheFileName = function() {
+  return this.id+"_"+this.rev;
 };
 
 // Touch access time to indicate recent use
@@ -110,7 +126,9 @@ function touchFile(path) {
 // If file is in cache return file stream, else request download
 File.prototype.readStream = function() {
   var self = this;
-  var cachePath = this.cachePath(this.mime.tinfo.cacheDir);
+  var tinfo = this.mime.tinfo;
+  var cacheFileName = this.cacheFileName();
+  var cachePath = path.join(tinfo.cacheDir, cacheFileName);
   var cachePathTmp;
   var somethingWentWrong = false;
   var rs, ws;
@@ -138,6 +156,7 @@ File.prototype.readStream = function() {
   if (fs.existsSync(cachePath)) {
     //console.log(this.id+" found in cache");
     touchFile(cachePath);
+    tinfo.cache.touchFile(cacheFileName);
     rs= fs.createReadStream(cachePath);
     rs.on('error', function(err) {
       console.log("read failed with "+err.code+" for "+self.id+", cleaning up");
@@ -178,6 +197,7 @@ File.prototype.readStream = function() {
     ws.on('close', function() {
       if (!somethingWentWrong) {
         fs.renameSync(cachePathTmp, cachePath);
+        tinfo.cache.addFile(cacheFileName);
       }
     });
     rs.pipe(ws);
@@ -238,7 +258,7 @@ function readFilePromise(path) {
 
 // Write data to file, using a temporary file and renaming at end
 // Action is asynchronous and cleans up after itself
-function writeFileAsyncWithRename(path, data) {
+function writeFileAsyncWithRename(path, data, callback) {
   var pathTmp = path + "_tmp";
   var somethingWentWrong = false;
   var cleanupTmpFile = true;
@@ -260,6 +280,9 @@ function writeFileAsyncWithRename(path, data) {
   ws.on('close', function() {
     if (!somethingWentWrong) {
       fs.renameSync(pathTmp, path); //success
+      if (callback) {
+        callback();
+      }
     } else {
       // failure, cleanup our temp file
       if (cleanupTmpFile) {
@@ -277,10 +300,12 @@ function writeFileAsyncWithRename(path, data) {
 File.prototype.getThumbnail = function(size) {
   var szinfo = sizeInfo[size];
   if (szinfo) {
-    var cachePath = this.cachePath(szinfo.cacheDir);
+    var cacheFileName = this.cacheFileName();
+    var cachePath = path.join(szinfo.cacheDir, cacheFileName);
     if (fs.existsSync(cachePath)) {
       // return from cache, touch the mod time to indicate recent use
       touchFile(cachePath);
+      szinfo.cache.touchFile(cacheFileName);
       return readFilePromise(cachePath);
     } else {
       // not found in cache, request from dropbox
@@ -289,7 +314,9 @@ File.prototype.getThumbnail = function(size) {
         size: szinfo.dbxsz
       }).then(function(result) {
         // write to cache (async)
-        writeFileAsyncWithRename(cachePath, result.fileBinary);
+        writeFileAsyncWithRename(cachePath, result.fileBinary, function() {
+          szinfo.cache.addFile(cacheFileName);
+        });
         // return to caller without waiting for write to finish
         return result.fileBinary;
       });
