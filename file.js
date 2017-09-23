@@ -64,6 +64,17 @@ var sizeInfo = {
 
 var sizes = Object.keys(sizeInfo);
 
+// Info and mime objects for contents.json file
+var contentsInfo = {
+  cacheDirName: "contents",
+  cacheMaxFiles: 100
+};
+
+var contentsMime = {
+  name: "application/json",
+  tinfo: contentsInfo
+};
+
 var cacheBaseDir;
 
 // Make cache directory and cache manager for specified info object
@@ -84,6 +95,7 @@ function setCacheBaseDir(baseDir) {
   sizes.forEach(function(size) {
     makeCacheDir(sizeInfo[size]);
   });
+  makeCacheDir(contentsInfo);
 }
 
 function File(parent, meta, parts, mime) {
@@ -108,6 +120,7 @@ File.typeInfo = typeInfo;
 File.types = types;
 File.sizeInfo = sizeInfo;
 File.sizes = sizes;
+File.contentsMime = contentsMime;
 File.setCacheBaseDir = setCacheBaseDir;
 
 // Return cache file name for this file
@@ -226,7 +239,6 @@ File.prototype.requestDownload = function() {
   })
   .on('response', function(res) {
     // clean up headers that we won't want to pass along
-    delete res.headers['dropbox-api-result'];
     Object.keys(res.headers).forEach(function(name) {
       switch (name.toLowerCase()) {
         // keep only these
@@ -297,33 +309,52 @@ function writeFileAsyncWithRename(path, data, callback) {
   ws.end(data, 'binary');
 }
 
+// Get file from cache if possible, otherwise request the file and save in cache
+File.prototype.getFromCacheOrRequest = function(info, doRequest) {
+  var cacheFileName = this.cacheFileName();
+  var cachePath = path.join(info.cacheDir, cacheFileName);
+  if (fs.existsSync(cachePath)) {
+    // return from cache, touch to indicate recent use
+    touchFile(cachePath);
+    info.cache.touchFile(cacheFileName);
+    return readFilePromise(cachePath);
+  } else {
+    // not found in cache, request from dropbox
+    return doRequest().then(function(result) {
+      // write to cache (async)
+      writeFileAsyncWithRename(cachePath, result.fileBinary, function() {
+        info.cache.addFile(cacheFileName);
+      });
+      // return to caller without waiting for write to finish
+      return result.fileBinary;
+    });
+  }
+}
+
+// Return picture thumbnail of specified size
 File.prototype.getThumbnail = function(size) {
+  var self = this;
   var szinfo = sizeInfo[size];
   if (szinfo) {
-    var cacheFileName = this.cacheFileName();
-    var cachePath = path.join(szinfo.cacheDir, cacheFileName);
-    if (fs.existsSync(cachePath)) {
-      // return from cache, touch the mod time to indicate recent use
-      touchFile(cachePath);
-      szinfo.cache.touchFile(cacheFileName);
-      return readFilePromise(cachePath);
-    } else {
-      // not found in cache, request from dropbox
+    return this.getFromCacheOrRequest(szinfo, function() {
       return mydbx.filesGetThumbnail({
-        path: this.dbxid,
+        path: self.dbxid,
         size: szinfo.dbxsz
-      }).then(function(result) {
-        // write to cache (async)
-        writeFileAsyncWithRename(cachePath, result.fileBinary, function() {
-          szinfo.cache.addFile(cacheFileName);
-        });
-        // return to caller without waiting for write to finish
-        return result.fileBinary;
       });
-    }
+    });
   } else {
     throw new Error("Unknown size: "+size);
   }
+};
+
+// Return contents of file
+// This function buffers and returns the entire file contents
+// If you want a readable stream, use readStream()
+File.prototype.getFile = function() {
+  var self = this;
+  return this.getFromCacheOrRequest(this.mime.tinfo, function() {
+    return mydbx.filesDownload({path: self.dbxid});
+  });
 };
 
 module.exports = File;

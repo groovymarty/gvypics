@@ -41,8 +41,10 @@ var app = express();
 app.get("/gvypics/ls", function(req, res) {
   Promise.resolve(true).then(function() {
     return root.possibleUpdate().then(function() {
-      res.json(root.represent());
-      return true; //done
+      return root.represent().then(function(rep) {
+        res.json(rep);
+        return true; //done
+      });
     });
   })
   .catch(function(error) {
@@ -59,6 +61,7 @@ function findFile(folder, parts) {
   return folder.findFile(parts.id, parts.type, true);
 }
 
+// List specified folder or file, returns JSON
 app.get("/gvypics/ls/:id", function(req, res) {
   Promise.resolve(true).then(function() {
     var id = req.params.id;
@@ -67,11 +70,14 @@ app.get("/gvypics/ls/:id", function(req, res) {
       return findFolder(parts).then(function(folder) {
         if (parts.what === 'folder') {
           return folder.possibleUpdate().then(function() {
-            res.json(folder.represent());
-            return true; //done
+            return folder.represent().then(function(rep) {
+              res.json(rep);
+              return true; //done
+            });
           });
         } else if (parts.what === 'file') {
           return findFile(folder, parts).then(function(file) {
+            // no promise needed for file.represent()
             res.json(file.represent());
             return true; //done
           });
@@ -88,6 +94,36 @@ app.get("/gvypics/ls/:id", function(req, res) {
   });
 });
 
+// Return contents.json of specified folder
+// Not really needed because "ls" also returns contents, but handy for testing
+app.get("/gvypics/contents/:id", function(req, res) {
+  Promise.resolve(true).then(function() {
+    var id = req.params.id;
+    var parts = pic.parseFolder(id);
+    if (parts) {
+      return findFolder(parts).then(function(folder) {
+        return folder.possibleUpdate().then(function() {
+          if (folder.contents) {
+            return folder.contents.getFile().then(function(data) {
+              res.set("Content-Type", folder.contents.mime.name);
+              res.end(data);
+              return true; //done
+            });
+          } else {
+            throw new Error("No contents for folder "+folder.id);
+          }
+        });
+      });
+    } else {
+      throw new Error("Parse failed for "+id);
+    }
+  })
+  .catch(function(error) {
+    res.status(404).send(getErrorMessage(error));
+  });
+});
+
+// Return a picture or thumbnail (if sz specified)
 app.get("/gvypics/pic/:id", function(req, res) {
   Promise.resolve(true).then(function() {
     var id = req.params.id;
@@ -121,6 +157,7 @@ app.get("/gvypics/pic/:id", function(req, res) {
   });
 });
 
+// Return a video
 app.get("/gvypics/vid/:id", function(req, res) {
   Promise.resolve(true).then(function() {
     var id = req.params.id;

@@ -13,6 +13,7 @@ function Folder(parent, meta, parts) {
   this.folders = {};
   this.pictures = {};
   this.videos = {};
+  this.contents = null;
   //console.log("Folder "+this.id+" created");
 }
 
@@ -59,6 +60,9 @@ Folder.prototype.update = function(recursive) {
           } else {
             console.log("**** Ignoring "+entry.name+", unknown type "+parts.type);
           }
+        } else if (entry.name.toLowerCase() === "contents.json") {
+          // note we use the folder's id for the contents.json file
+          self.contents = new File(self, entry, {id: self.id, num: 0}, File.contentsMime);
         } else {
           //console.log("Skipping " + entry.name);
         }
@@ -128,7 +132,7 @@ Folder.prototype.freshUpdate = function() {
 
 Folder.prototype.represent = function() {
   var self = this;
-  return {
+  var rep = {
     name: this.name,
     id: this.id,
     folders: Object.keys(this.folders).sort(),
@@ -139,6 +143,20 @@ Folder.prototype.represent = function() {
       return self.videos[id1].num - self.videos[id2].num;
     })
   };
+  if (this.contents) {
+    // folder has contents.json
+    return this.contents.getFile().then(function(data) {
+      try {
+        rep.contents = JSON.parse(data.toString());
+      } catch (e) {
+        throw new Error("Error parsing contents.json in "+self.id);
+      }
+      return rep;
+    });
+  } else {
+    // no contents
+    return Promise.resolve(rep);
+  }
 };
 
 Folder.prototype.isEmpty = function() {
