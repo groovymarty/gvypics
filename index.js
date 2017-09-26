@@ -5,6 +5,7 @@ var pic = require("./pic.js");
 var mydbx = require("./mydbx.js");
 var Folder = require("./folder.js");
 var File = require("./file.js");
+var finder = require("./finder.js");
 var root = {};
 var initLoadAll = true;
 var cacheBaseDir = "./cache";
@@ -27,6 +28,7 @@ function getErrorMessage(error) {
 
 mydbx.filesGetMetadata({path: "/Pictures"}).then(function(meta) {
   root = new Folder(null, meta, {id: "/"});
+  finder.setRootFolder(root);
   return root.update(initLoadAll).then(function() {
     console.log("root update finished");
     console.log(root.count(true));
@@ -52,22 +54,13 @@ app.get("/gvypics/ls", function(req, res) {
   });
 });
 
-// find folder or file from parsed id
-function findFolder(parts) {
-  return root.findFolder(parts.parent, parts.child, true);
-}
-
-function findFile(folder, parts) {
-  return folder.findFile(parts.id, parts.type, true);
-}
-
 // List specified folder or file, returns JSON
 app.get("/gvypics/ls/:id", function(req, res) {
   Promise.resolve(true).then(function() {
     var id = req.params.id;
     var parts = pic.parse(id);
     if (parts) {
-      return findFolder(parts).then(function(folder) {
+      return finder.findFolder(parts).then(function(folder) {
         if (parts.what === 'folder') {
           return folder.possibleUpdate().then(function() {
             return folder.represent().then(function(rep) {
@@ -76,7 +69,7 @@ app.get("/gvypics/ls/:id", function(req, res) {
             });
           });
         } else if (parts.what === 'file') {
-          return findFile(folder, parts).then(function(file) {
+          return finder.findFile(folder, parts).then(function(file) {
             // no promise needed for file.represent()
             res.json(file.represent());
             return true; //done
@@ -98,25 +91,17 @@ app.get("/gvypics/ls/:id", function(req, res) {
 // Not really needed because "ls" also returns contents and metadata, but handy for testing
 function getJsonFile(req, res, whichFile) {
   Promise.resolve(true).then(function() {
-    var id = req.params.id;
-    var parts = pic.parseFolder(id);
-    if (parts) {
-      return findFolder(parts).then(function(folder) {
-        return folder.possibleUpdate().then(function() {
-          if (folder[whichFile]) {
-            return folder[whichFile].getFile().then(function(data) {
-              res.set("Content-Type", folder[whichFile].mime.name);
-              res.end(data);
-              return true; //done
-            });
-          } else {
-            res.json("{}");
-          }
+    return finder.parseAndFindFolder(req.params.id).then(function(folder) {
+      if (folder[whichFile]) {
+        return folder[whichFile].getFile().then(function(data) {
+          res.set("Content-Type", folder[whichFile].mime.name);
+          res.end(data);
+          return true; //done
         });
-      });
-    } else {
-      throw new Error("Parse failed for "+id);
-    }
+      } else {
+        res.json("{}");
+      }
+    });
   })
   .catch(function(error) {
     res.status(404).send(getErrorMessage(error));
@@ -138,8 +123,8 @@ app.get("/gvypics/pic/:id", function(req, res) {
     var parts = pic.parseFile(id);
     if (parts) {
       if (parts.type === "") {
-        return findFolder(parts).then(function(folder) {
-          return findFile(folder, parts).then(function(file) {
+        return finder.findFolder(parts).then(function(folder) {
+          return finder.findFile(folder, parts).then(function(file) {
             if (req.query.sz) {
               return file.getThumbnail(req.query.sz).then(function(data) {
                 res.set("Content-Type", "image/jpeg");
@@ -172,8 +157,8 @@ app.get("/gvypics/vid/:id", function(req, res) {
     var parts = pic.parseFile(id);
     if (parts) {
       if (parts.type === "V") {
-        return findFolder(parts).then(function(folder) {
-          return findFile(folder, parts).then(function(file) {
+        return finder.findFolder(parts).then(function(folder) {
+          return finder.findFile(folder, parts).then(function(file) {
             res.set("Content-Type", file.mime.name);
             var rs = file.readStream();
             // for videos, tell read stream to stop if our connection gets closed

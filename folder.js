@@ -105,7 +105,7 @@ Folder.prototype.update = function(recursive) {
         }));
       } else {
         // not recursive
-        return true; //done
+        return self; //done
       }
     });
 };
@@ -117,7 +117,7 @@ Folder.prototype.possibleUpdate = function() {
     return this.update();
   } else {
     // no update needed
-    return Promise.resolve(true);
+    return Promise.resolve(this);
   }
 };
 
@@ -128,7 +128,7 @@ Folder.prototype.freshUpdate = function() {
     return this.update();
   } else {
     // no update needed
-    return Promise.resolve(true);
+    return Promise.resolve(this);
   }
 };
 
@@ -157,6 +157,13 @@ Folder.prototype.represent = function() {
       return true; //no file
     }
   })).then(function() {
+    // if folder has contents.json, gather metadata for each item
+    /*if (self.contents) {
+      var contentsMeta = {};
+      return Promise.all(File.types.map(type) {
+        return true;
+      }
+    }*/
     return rep;
   });
 };
