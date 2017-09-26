@@ -64,7 +64,7 @@ var sizeInfo = {
 
 var sizes = Object.keys(sizeInfo);
 
-// Info and mime objects for contents.json file
+// Info and mime objects for contents.json and meta.json files
 var contentsInfo = {
   cacheDirName: "contents",
   cacheMaxFiles: 100
@@ -73,6 +73,16 @@ var contentsInfo = {
 var contentsMime = {
   name: "application/json",
   tinfo: contentsInfo
+};
+
+var metaInfo = {
+  cacheDirName: "meta",
+  cacheMaxFiles: 100
+};
+
+var metaMime = {
+  name: "application/json",
+  tinfo: metaInfo
 };
 
 var cacheBaseDir;
@@ -96,6 +106,7 @@ function setCacheBaseDir(baseDir) {
     makeCacheDir(sizeInfo[size]);
   });
   makeCacheDir(contentsInfo);
+  makeCacheDir(metaInfo);
 }
 
 function File(parent, meta, parts, mime) {
@@ -121,6 +132,7 @@ File.types = types;
 File.sizeInfo = sizeInfo;
 File.sizes = sizes;
 File.contentsMime = contentsMime;
+File.metaMime = metaMime;
 File.setCacheBaseDir = setCacheBaseDir;
 
 // Return cache file name for this file

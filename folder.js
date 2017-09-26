@@ -61,8 +61,10 @@ Folder.prototype.update = function(recursive) {
             console.log("**** Ignoring "+entry.name+", unknown type "+parts.type);
           }
         } else if (entry.name.toLowerCase() === "contents.json") {
-          // note we use the folder's id for the contents.json file
+          // note we use the folder's id for the contents.json and meta.json files
           self.contents = new File(self, entry, {id: self.id, num: 0}, File.contentsMime);
+        } else if (entry.name.toLowerCase() === "meta.json") {
+          self.meta = new File(self, entry, {id: self.id, num: 0}, File.metaMime);
         } else {
           //console.log("Skipping " + entry.name);
         }
@@ -143,20 +145,24 @@ Folder.prototype.represent = function() {
       return self.videos[id1].num - self.videos[id2].num;
     })
   };
-  if (this.contents) {
-    // folder has contents.json
-    return this.contents.getFile().then(function(data) {
-      try {
-        rep.contents = JSON.parse(data.toString());
-      } catch (e) {
-        throw new Error("Error parsing contents.json in "+self.id);
-      }
-      return rep;
-    });
-  } else {
-    // no contents
-    return Promise.resolve(rep);
-  }
+  // add contents.json and meta.json, if they exist
+  return Promise.all(['contents', 'meta'].map(function(whichFile) {
+    if (self[whichFile]) {
+      // folder has contents.json or meta.json file
+      return self[whichFile].getFile().then(function(data) {
+        try {
+          rep[whichFile] = JSON.parse(data.toString());
+        } catch (e) {
+          throw new Error("Error parsing "+whichFile+".json in "+self.id);
+        }
+        return true; //done with file
+      });
+    } else {
+      return true; //no file
+    }
+  })).then(function() {
+    return rep;
+  });
 };
 
 Folder.prototype.isEmpty = function() {

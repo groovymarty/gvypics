@@ -94,23 +94,23 @@ app.get("/gvypics/ls/:id", function(req, res) {
   });
 });
 
-// Return contents.json of specified folder
-// Not really needed because "ls" also returns contents, but handy for testing
-app.get("/gvypics/contents/:id", function(req, res) {
+// Return contents.json or mime.json of specified folder
+// Not really needed because "ls" also returns contents and metadata, but handy for testing
+function getJsonFile(req, res, whichFile) {
   Promise.resolve(true).then(function() {
     var id = req.params.id;
     var parts = pic.parseFolder(id);
     if (parts) {
       return findFolder(parts).then(function(folder) {
         return folder.possibleUpdate().then(function() {
-          if (folder.contents) {
-            return folder.contents.getFile().then(function(data) {
-              res.set("Content-Type", folder.contents.mime.name);
+          if (folder[whichFile]) {
+            return folder[whichFile].getFile().then(function(data) {
+              res.set("Content-Type", folder[whichFile].mime.name);
               res.end(data);
               return true; //done
             });
           } else {
-            throw new Error("No contents for folder "+folder.id);
+            res.json("{}");
           }
         });
       });
@@ -121,6 +121,14 @@ app.get("/gvypics/contents/:id", function(req, res) {
   .catch(function(error) {
     res.status(404).send(getErrorMessage(error));
   });
+}  
+  
+app.get("/gvypics/contents/:id", function(req, res) {
+  getJsonFile(req, res, 'contents');
+});
+
+app.get("/gvypics/meta/:id", function(req, res) {
+  getJsonFile(req, res, 'meta');
 });
 
 // Return a picture or thumbnail (if sz specified)
