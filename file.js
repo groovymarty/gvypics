@@ -3,6 +3,7 @@ var path = require('path');
 var request = require('request');
 var mydbx = require("./mydbx.js");
 var Cache = require("./cache.js");
+var ObjCache = require("./objcache.js");
 
 var typeInfo = {
   "": {
@@ -66,8 +67,10 @@ var sizes = Object.keys(sizeInfo);
 
 // Info and mime objects for contents.json and meta.json files
 var contentsInfo = {
+  name: "contents.json",
   cacheDirName: "contents",
-  cacheMaxFiles: 100
+  cacheMaxFiles: 100,
+  objTimeout: 60000
 };
 
 var contentsMime = {
@@ -76,8 +79,10 @@ var contentsMime = {
 };
 
 var metaInfo = {
+  name: "meta.json",
   cacheDirName: "meta",
-  cacheMaxFiles: 100
+  cacheMaxFiles: 100,
+  objTimeout: 60000
 };
 
 var metaMime = {
@@ -96,6 +101,11 @@ function makeCacheDir(info) {
   info.cache = new Cache(info.cacheDir, info.cacheMaxFiles);
 }
 
+// Make object cache
+function makeObjCache(info) {
+  info.objCache = new ObjCache(info.objTimeout);
+}
+
 // Called at startup with cache base directory
 function setCacheBaseDir(baseDir) {
   cacheBaseDir = baseDir;
@@ -106,7 +116,9 @@ function setCacheBaseDir(baseDir) {
     makeCacheDir(sizeInfo[size]);
   });
   makeCacheDir(contentsInfo);
+  makeObjCache(contentsInfo);
   makeCacheDir(metaInfo);
+  makeObjCache(metaInfo);
 }
 
 function File(parent, meta, parts, mime) {
@@ -344,6 +356,7 @@ File.prototype.getFromCacheOrRequest = function(info, doRequest) {
 }
 
 // Return picture thumbnail of specified size
+// Assumes file is type picture
 File.prototype.getThumbnail = function(size) {
   var self = this;
   var szinfo = sizeInfo[size];
@@ -367,6 +380,29 @@ File.prototype.getFile = function() {
   return this.getFromCacheOrRequest(this.mime.tinfo, function() {
     return mydbx.filesDownload({path: self.dbxid});
   });
+};
+
+// Return JSON contents of file
+// Assumes file is content.json or meta.json
+File.prototype.getJson = function() {
+  var self = this;
+  var info = this.mime.tinfo;
+  var obj = info.objCache.lookup(this.dbxid);
+  if (obj) {
+    // found in object cache, resolve instantly
+    return Promise.resolve(obj);
+  } else {
+    // get JSON contents and parse it
+    return this.getFile().then(function(data) {
+      try {
+        obj = JSON.parse(data.toString());
+      } catch (e) {
+        throw new Error("Error parsing "+info.name+" in "+self.parent.id);
+      }
+      // add to object cache and return the parsed object
+      return info.objCache.add(self.dbxid, obj);
+    });
+  }
 };
 
 module.exports = File;

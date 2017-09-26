@@ -149,12 +149,8 @@ Folder.prototype.represent = function() {
   return Promise.all(['contents', 'meta'].map(function(whichFile) {
     if (self[whichFile]) {
       // folder has contents.json or meta.json file
-      return self[whichFile].getFile().then(function(data) {
-        try {
-          rep[whichFile] = JSON.parse(data.toString());
-        } catch (e) {
-          throw new Error("Error parsing "+whichFile+".json in "+self.id);
-        }
+      return self[whichFile].getJson().then(function(obj) {
+        rep[whichFile] = obj;
         return true; //done with file
       });
     } else {

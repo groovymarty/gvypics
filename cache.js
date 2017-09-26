@@ -68,7 +68,7 @@ Cache.prototype.touchFile = function(fileName) {
     var i = this.oldIndex[fileName];
     if (i !== undefined && this.oldFiles[i].name) {
       // sanity check
-      if (this.oldFiles[i].name != fileName) {
+      if (this.oldFiles[i].name !== fileName) {
         console.log("!!! oldFiles[i].name is "+oldFiles[i].name+", expected "+fileName);
       }
       // remove from old array but leave element in place so we won't break the index
