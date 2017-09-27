@@ -1,9 +1,9 @@
 //                parentBase    parentSfx  child          sep    comment
 //                |1            |2         |3             |4     |5
 var folderPat = /^([A-Za-z]+\d*)([A-Za-z]*)(\d*(?:\+\d+)*)([- ]*)(.*)/;
-//                parentBase    parentSfx  child           type       z   num       sep    commentExt
-//                |1            |2         |3              |4         |5  |6        |7     |8
-var filePat   = /^([A-Za-z]+\d*)([A-Za-z]*)(\d*(?:\+\d+)*)-([A-Za-z]*)(0*)([1-9]\d*)([- ]*)(.*)/;
+//                parentBase    parentSfx  child           type       z   num       ver        sep    commentExt
+//                |1            |2         |3              |4         |5  |6        |7         |8     |9
+var filePat   = /^([A-Za-z]+\d*)([A-Za-z]*)(\d*(?:\+\d+)*)-([A-Za-z]*)(0*)([1-9]\d*)([A-Za-z]*)([- ]*)(.*)/;
 
 // leading plus unnecessary if parent has suffix (and therefore ends with a letter)
 function trimChild(mr) {
@@ -38,9 +38,9 @@ function parseFile(name) {
   if (mr) {
     // find last dot for extension
     // hard to do in regular expression because extension is optional
-    var idot = mr[8].lastIndexOf(".");
+    var idot = mr[9].lastIndexOf(".");
     if (idot < 0) {
-      idot = mr[8].length;
+      idot = mr[9].length;
     }
     var parts = {
       parent: (mr[1] + mr[2]).toUpperCase(),
@@ -48,13 +48,14 @@ function parseFile(name) {
       type: mr[4].toUpperCase(),
       zeros: mr[5],
       num: parseInt(mr[6]),
-      sep: mr[7],
-      comment: mr[8].substr(0, idot),
-      ext: mr[8].substr(idot).toLowerCase(),
+      ver: mr[7].toUpperCase(),
+      sep: mr[8],
+      comment: mr[9].substr(0, idot),
+      ext: mr[9].substr(idot).toLowerCase(),
       what: "file"
     };
     if (parts.sep || !parts.comment) {
-      parts.id = parts.parent + parts.child + "-" + parts.type + parts.num;
+      parts.id = parts.parent + parts.child + "-" + parts.type + parts.num + parts.ver;
       return parts;
     }
   }

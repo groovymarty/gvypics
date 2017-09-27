@@ -178,11 +178,18 @@ Folder.prototype.represent = function() {
           if (container) {
             // do all items in this container
             // note that contents containers are arrays, not dictionaries
-            return Promise.all(container.map(function(id) {
+            return Promise.all(container.map(function(id, i) {
               // find the item (might be folder or file)
               return finder.parseAndFind(id).then(function(item) {
                 // add item name to our result
                 rep.contentsNames[item.id] = item.name;
+                // Overwrite id in container array to make sure it's canonical,
+                // for example change "A19-385-sherri-1956.jpg" to "A19-385".
+                // This lets the front end use the ids to look up metadata, names, etc.
+                // The container array we're updating is the one in the "contents" object,
+                // which is in the object cache and also pointed to by rep.contents.
+                // All these are refs to the same object so they will all see the change.
+                container[i] = item.id;
                 // does item's parent folder have metadata?
                 if (item.parent.meta) {
                   return item.parent.meta.getJson().then(function(meta) {
