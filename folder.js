@@ -14,7 +14,8 @@ function Folder(parent, meta, parts) {
   this.folders = {};
   this.pictures = {};
   this.videos = {};
-  this.contents = null;
+  // lastUpdate, added by update()
+  // contents and/or meta, added by update() if corresponding json files are present
   //console.log("Folder "+this.id+" created");
 }
 
