@@ -65,8 +65,20 @@ function parse(name) {
   return parseFile(name) || parseFolder(name);
 }
 
+function getErrorMessage(error) {
+  if (error.message) {
+    return error.message;
+  } else if (error.error) {
+    return error.error;
+  } else {
+    console.log(error);
+    return "An error happened!";
+  }
+}
+
 module.exports = {
   parseFolder: parseFolder,
   parseFile: parseFile,
-  parse: parse
+  parse: parse,
+  getErrorMessage: getErrorMessage
 };

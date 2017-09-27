@@ -167,21 +167,25 @@ Folder.prototype.represent = function() {
       return true; //no file
     }
   })).then(function() {
-    // if folder has contents.json, gather metadata for each item into contentsMeta
+    // if folder has contents.json, gather names and metadata for all items
     if (self.contents) {
+      rep.contentsNames = {};
       rep.contentsMeta = {};
       return self.contents.getJson().then(function(contents) {
         // do photos, videos and folders
         return Promise.all(File.containerNames.map(function(containerName) {
           var container = contents[containerName];
           if (container) {
-            // do all items in this container (like all photos in photos array)
+            // do all items in this container
+            // note that contents containers are arrays, not dictionaries
             return Promise.all(container.map(function(id) {
-              // find folder where this item comes from
-              return finder.parseAndFindFolder(id).then(function(folder) {
-                // does item's folder have metadata at all?
-                if (folder.meta) {
-                  return folder.meta.getJson().then(function(meta) {
+              // find the item (might be folder or file)
+              return finder.parseAndFind(id).then(function(item) {
+                // add item name to our result
+                rep.contentsNames[item.id] = item.name;
+                // does item's parent folder have metadata?
+                if (item.parent.meta) {
+                  return item.parent.meta.getJson().then(function(meta) {
                     // does this item have metadata?
                     if (id in meta) {
                       // add item's metadata to our result
@@ -192,6 +196,8 @@ Folder.prototype.represent = function() {
                 } else {
                   return true; //no meta
                 }
+              }).catch(function(err) {
+                console.log("error gathering id "+id+": "+pic.getErrorMessage(err));
               });
             }));
           } else {

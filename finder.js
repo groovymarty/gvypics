@@ -29,11 +29,30 @@ function parseAndFindFolder(id) {
 }
 
 function parseAndFindFile(id) {
-  var parts = pic.parseFolder(id);
+  var parts = pic.parseFile(id);
   if (parts) {
     return findFolder(parts).then(function(folder) {
-      return folder.findFile(folder, parts);
+      return findFile(folder, parts);
     });
+  } else {
+    throw new Error("Parse failed for "+id);
+  }
+}
+
+function parseAndFind(id) {
+  var parts = pic.parse(id);
+  if (parts) {
+    if (parts.what === "folder") {
+      return findFolder(parts).then(function(folder) {
+        return folder.possibleUpdate();
+      });
+    } else if (parts.what === "file") {
+      return findFolder(parts).then(function(folder) {
+        return findFile(folder, parts);
+      });
+    } else {
+      throw new Error("Can't handle what="+parts.what);
+    }
   } else {
     throw new Error("Parse failed for "+id);
   }
@@ -44,5 +63,6 @@ module.exports = {
   findFolder: findFolder,
   findFile: findFile,
   parseAndFindFolder: parseAndFindFolder,
-  parseAndFindFile: parseAndFindFile
+  parseAndFindFile: parseAndFindFile,
+  parseAndFind: parseAndFind
 };

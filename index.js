@@ -15,17 +15,6 @@ if (!fs.existsSync(cacheBaseDir)) {
 }
 File.setCacheBaseDir(cacheBaseDir);
 
-function getErrorMessage(error) {
-  if (error.message) {
-    return error.message;
-  } else if (error.error) {
-    return error.error;
-  } else {
-    console.log(error);
-    return "An error happened!";
-  }
-}
-
 mydbx.filesGetMetadata({path: "/Pictures"}).then(function(meta) {
   root = new Folder(null, meta, {id: "/"});
   finder.setRootFolder(root);
@@ -36,7 +25,7 @@ mydbx.filesGetMetadata({path: "/Pictures"}).then(function(meta) {
   });
 })
 .catch(function(error) {
-  console.log(getErrorMessage(error));
+  console.log(pic.getErrorMessage(error));
 });
 
 var app = express();
@@ -50,7 +39,7 @@ app.get("/gvypics/ls", function(req, res) {
     });
   })
   .catch(function(error) {
-    res.status(404).send(getErrorMessage(error));
+    res.status(404).send(pic.getErrorMessage(error));
   });
 });
 
@@ -83,7 +72,7 @@ app.get("/gvypics/ls/:id", function(req, res) {
     }
   })
   .catch(function(error) {
-    res.status(404).send(getErrorMessage(error));
+    res.status(404).send(pic.getErrorMessage(error));
   });
 });
 
@@ -104,7 +93,7 @@ function getJsonFile(req, res, whichFile) {
     });
   })
   .catch(function(error) {
-    res.status(404).send(getErrorMessage(error));
+    res.status(404).send(pic.getErrorMessage(error));
   });
 }  
   
@@ -146,7 +135,7 @@ app.get("/gvypics/pic/:id", function(req, res) {
     }
   })
   .catch(function(error) {
-    res.status(404).send(getErrorMessage(error));
+    res.status(404).send(pic.getErrorMessage(error));
   });
 });
 
@@ -177,7 +166,7 @@ app.get("/gvypics/vid/:id", function(req, res) {
     }
   })
   .catch(function(error) {
-    res.status(404).send(getErrorMessage(error));
+    res.status(404).send(pic.getErrorMessage(error));
   });
 });
 
