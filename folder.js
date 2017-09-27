@@ -144,6 +144,16 @@ Folder.prototype.represent = function() {
       return self.videos[id1].num - self.videos[id2].num;
     })
   };
+  // gather names of all items
+  rep.names = {};
+  File.containerNames.forEach(function(containerName) {
+    var container = self[containerName];
+    if (container) {
+      Object.keys(container).forEach(function(id) {
+        rep.names[id] = container[id].name;
+      });
+    }
+  });
   // add contents.json and meta.json, if they exist
   return Promise.all(['contents', 'meta'].map(function(whichFile) {
     if (self[whichFile]) {
