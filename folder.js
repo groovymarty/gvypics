@@ -1,6 +1,7 @@
 var mydbx = require("./mydbx.js");
 var pic = require("./pic.js");
 var File = require("./file.js");
+var finder = require("./finder.js");
 
 var freshMs = 30*1000;       //update is fresh for 30 sec
 var staleMs = 6*60*60*1000;  //update is stale after 6 hrs
@@ -92,10 +93,8 @@ Folder.prototype.update = function(recursive) {
     .then(processListFolderResult)
     .then(function() {
       // clean up deleted files and folders
-      cleanupDeleted(self.folders, "folder");
-      File.types.forEach(function(type) {
-        var tinfo = File.typeInfo[type];
-        cleanupDeleted(self[tinfo.containerName], tinfo.name);
+      File.containerNames.forEach(function(containerName) {
+        cleanupDeleted(self[containerName], containerName);
       });
       // set last update time
       self.lastUpdate = Date.now();
@@ -157,13 +156,43 @@ Folder.prototype.represent = function() {
       return true; //no file
     }
   })).then(function() {
-    // if folder has contents.json, gather metadata for each item
-    /*if (self.contents) {
-      var contentsMeta = {};
-      return Promise.all(File.types.map(type) {
-        return true;
-      }
-    }*/
+    // if folder has contents.json, gather metadata for each item into contentsMeta
+    if (self.contents) {
+      rep.contentsMeta = {};
+      return self.contents.getJson().then(function(contents) {
+        // do photos, videos and folders
+        return Promise.all(File.containerNames.map(function(containerName) {
+          var container = contents[containerName];
+          if (container) {
+            // do all items in this container (like all photos in photos array)
+            return Promise.all(container.map(function(id) {
+              // find folder where this item comes from
+              return finder.parseAndFindFolder(id).then(function(folder) {
+                // does item's folder have metadata at all?
+                if (folder.meta) {
+                  return folder.meta.getJson().then(function(meta) {
+                    // does this item have metadata?
+                    if (id in meta) {
+                      // add item's metadata to our result
+                      rep.contentsMeta[id] = meta[id];
+                    }
+                    return true; //done
+                  });
+                } else {
+                  return true; //no meta
+                }
+              });
+            }));
+          } else {
+            return true; //no container
+          }
+        }));
+      });
+    } else {
+      return true; //no contents
+    }
+  }).then(function() {
+    // final result
     return rep;
   });
 };

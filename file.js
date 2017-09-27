@@ -36,6 +36,12 @@ var typeInfo = {
 
 var types = Object.keys(typeInfo);
 
+// Make a list of all container names, including "folders"
+var containerNames = types.map(function(type) {
+  return typeInfo[type].containerName;
+});
+containerNames.push("folders");
+
 // Add tinfo pointer to each mime object
 types.forEach(function(type) {
   var tinfo = typeInfo[type];
@@ -141,6 +147,7 @@ File.prototype.represent = function() {
 
 File.typeInfo = typeInfo;
 File.types = types;
+File.containerNames = containerNames;
 File.sizeInfo = sizeInfo;
 File.sizes = sizes;
 File.contentsMime = contentsMime;
