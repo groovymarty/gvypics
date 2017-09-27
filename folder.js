@@ -11,12 +11,17 @@ function Folder(parent, meta, parts) {
   this.name = meta.name;
   this.path = meta.path_lower;
   this.id = parts.id;
+  this.num = parts.num;
   this.folders = {};
   this.pictures = {};
   this.videos = {};
   // lastUpdate, added by update()
   // contents and/or meta, added by update() if corresponding json files are present
   //console.log("Folder "+this.id+" created");
+}
+
+Folder.prototype.isRootFolder = function() {
+  return this === finder.getRootFolder();
 }
 
 Folder.prototype.update = function(recursive) {
@@ -137,7 +142,11 @@ Folder.prototype.represent = function() {
   var rep = {
     name: this.name,
     id: this.id,
-    folders: Object.keys(this.folders).sort(),
+    folders: Object.keys(this.folders).sort(
+      // if root folder use default sort by ids, else sort by last child number
+      this.isRootFolder() ? undefined : function(id1, id2) {
+        return self.folders[id1].num - self.folders[id2].num;
+      }),
     pictures: Object.keys(this.pictures).sort(function(id1, id2) {
       return self.pictures[id1].num - self.pictures[id2].num;
     }),

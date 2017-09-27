@@ -21,6 +21,9 @@ function parseFolder(name) {
     var parts = {
       parent: (mr[1] + mr[2]).toUpperCase(),
       child: trimChild(mr),
+      // child number for sorting or NaN if no child string
+      // note lastIndexOf returns -1 if not found, plus 1 gives 0 resulting in entire string
+      num: parseInt(mr[3].substr(mr[3].lastIndexOf("+") + 1)),
       sep: mr[4],
       comment: mr[5],
       what: "folder"

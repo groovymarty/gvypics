@@ -8,6 +8,10 @@ function setRootFolder(rootFolder) {
   root = rootFolder;
 }
 
+function getRootFolder() {
+  return root;
+}
+
 // find folder or file from parsed id
 function findFolder(parts) {
   return root.findFolder(parts.parent, parts.child, true);
@@ -60,6 +64,7 @@ function parseAndFind(id) {
 
 module.exports = {
   setRootFolder: setRootFolder,
+  getRootFolder: getRootFolder,
   findFolder: findFolder,
   findFile: findFile,
   parseAndFindFolder: parseAndFindFolder,
