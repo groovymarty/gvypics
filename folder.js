@@ -6,10 +6,10 @@ var finder = require("./finder.js");
 var freshMs = 30*1000;       //update is fresh for 30 sec
 var staleMs = 6*60*60*1000;  //update is stale after 6 hrs
 
-function Folder(parent, meta, parts) {
+function Folder(parent, dbxmeta, parts) {
   this.parent = parent;
-  this.name = meta.name;
-  this.path = meta.path_lower;
+  this.name = dbxmeta.name;
+  this.path = dbxmeta.path_lower;
   this.id = parts.id;
   this.num = parts.num;
   this.folders = {};
@@ -22,7 +22,12 @@ function Folder(parent, meta, parts) {
 
 Folder.prototype.isRootFolder = function() {
   return this === finder.getRootFolder();
-}
+};
+
+Folder.prototype.updateProperties = function(dbxmeta) {
+  this.name = dbxmeta.name;
+  this.path = dbxmeta.path_lower;
+};
 
 Folder.prototype.update = function(recursive) {
   var self = this;
@@ -40,6 +45,8 @@ Folder.prototype.update = function(recursive) {
             idsSeen[parts.id] = true;
             if (!(parts.id in self.folders)) {
               self.folders[parts.id] = new Folder(self, entry, parts);
+            } else {
+              self.folders[parts.id].updateProperties(entry);
             }
           }
         } else {

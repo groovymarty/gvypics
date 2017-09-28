@@ -127,21 +127,21 @@ function setCacheBaseDir(baseDir) {
   makeObjCache(metaInfo);
 }
 
-function File(parent, meta, parts, mime) {
+function File(parent, dbxmeta, parts, mime) {
   this.parent = parent;
-  this.name = meta.name;
-  this.dbxid = meta.id;
-  this.rev = meta.rev;
+  this.name = dbxmeta.name;
+  this.dbxid = dbxmeta.id;
+  this.rev = dbxmeta.rev;
   this.id = parts.id;
   this.num = parts.num;
   this.mime = mime;
   //console.log("File "+this.id+" created");
 }
 
-File.prototype.update = function(meta, mime) {
-  this.name = meta.name;
-  this.dbxid = meta.id;
-  this.rev = meta.rev;
+File.prototype.update = function(dbxmeta, mime) {
+  this.name = dbxmeta.name;
+  this.dbxid = dbxmeta.id;
+  this.rev = dbxmeta.rev;
   this.mime = mime;
 }
 
