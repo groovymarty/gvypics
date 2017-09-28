@@ -149,7 +149,7 @@ Folder.prototype.possibleUpdate = function(limitMs) {
 
 // Ensure folder is freshly updated
 Folder.prototype.freshUpdate = function() {
-  this.possibleUpdate(freshMs);
+  return this.possibleUpdate(freshMs);
 };
 
 Folder.prototype.represent = function() {
