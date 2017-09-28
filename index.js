@@ -31,7 +31,7 @@ mydbx.filesGetMetadata({path: "/Pictures"}).then(function(meta) {
 var app = express();
 app.get("/gvypics/ls", function(req, res) {
   Promise.resolve(true).then(function() {
-    return root.possibleUpdate().then(function() {
+    return root.possibleUpdate(req.query).then(function() {
       return root.represent().then(function(rep) {
         res.json(rep);
         return true; //done
@@ -51,7 +51,7 @@ app.get("/gvypics/ls/:id", function(req, res) {
     if (parts) {
       return finder.findFolder(parts).then(function(folder) {
         if (parts.what === 'folder') {
-          return folder.possibleUpdate().then(function() {
+          return folder.possibleUpdate(req.query).then(function() {
             return folder.represent().then(function(rep) {
               res.json(rep);
               return true; //done

@@ -59,6 +59,8 @@ Folder.prototype.update = function(recursive) {
                 idsSeen[parts.id] = true;
                 if (!(parts.id in container)) {
                   container[parts.id] = new File(self, entry, parts, mime);
+                } else {
+                  container[parts.id].update(entry, mime);
                 }
               }
             } else {
@@ -69,9 +71,17 @@ Folder.prototype.update = function(recursive) {
           }
         } else if (entry.name.toLowerCase() === "contents.json") {
           // note we use the folder's id for the contents.json and meta.json files
-          self.contents = new File(self, entry, {id: self.id, num: 0}, File.contentsMime);
+          if (!self.contents) {
+            self.contents = new File(self, entry, {id: self.id, num: 0}, File.contentsMime);
+          } else {
+            self.contents.update(entry, File.contentsMime);
+          }
         } else if (entry.name.toLowerCase() === "meta.json") {
-          self.meta = new File(self, entry, {id: self.id, num: 0}, File.metaMime);
+          if (!self.meta) {
+            self.meta = new File(self, entry, {id: self.id, num: 0}, File.metaMime);
+          } else {
+            self.meta.update(entry, File.metaMime);
+          }
         } else {
           //console.log("Skipping " + entry.name);
         }
@@ -116,9 +126,20 @@ Folder.prototype.update = function(recursive) {
 };
 
 // Update folder if it's been awhile since it was last updated
-Folder.prototype.possibleUpdate = function() {
-  if (!this.lastUpdate || (Date.now() - this.lastUpdate) > staleMs) {
-    // never updated or last update is stale
+Folder.prototype.possibleUpdate = function(limitMs) {
+  if (!limitMs) {
+    limitMs = staleMs;
+  } else if (typeof limitMs === 'object') {
+    if (limitMs.force) {
+      limitMs = 0;
+    } else if (limitMs.fresh) {
+      limitMs = freshMs;
+    } else {
+      limitMs = staleMs;
+    }
+  }
+  if (!this.lastUpdate || (Date.now() - this.lastUpdate) > limitMs) {
+    // never updated or last update is too long ago
     return this.update();
   } else {
     // no update needed
@@ -128,13 +149,7 @@ Folder.prototype.possibleUpdate = function() {
 
 // Ensure folder is freshly updated
 Folder.prototype.freshUpdate = function() {
-  if (!this.lastUpdate || (Date.now() - this.lastUpdate) > freshMs) {
-    // never updated or not freshly updated
-    return this.update();
-  } else {
-    // no update needed
-    return Promise.resolve(this);
-  }
+  this.possibleUpdate(freshMs);
 };
 
 Folder.prototype.represent = function() {
@@ -203,9 +218,9 @@ Folder.prototype.represent = function() {
                 if (item.parent.meta) {
                   return item.parent.meta.getJson().then(function(meta) {
                     // does this item have metadata?
-                    if (id in meta) {
+                    if (item.id in meta) {
                       // add item's metadata to our result
-                      rep.contentsMeta[id] = meta[id];
+                      rep.contentsMeta[item.id] = meta[item.id];
                     }
                     return true; //done
                   });

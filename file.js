@@ -138,6 +138,13 @@ function File(parent, meta, parts, mime) {
   //console.log("File "+this.id+" created");
 }
 
+File.prototype.update = function(meta, mime) {
+  this.name = meta.name;
+  this.dbxid = meta.id;
+  this.rev = meta.rev;
+  this.mime = mime;
+}
+
 File.prototype.represent = function() {
   return {
     name: this.name,
@@ -394,7 +401,8 @@ File.prototype.getFile = function() {
 File.prototype.getJson = function() {
   var self = this;
   var info = this.mime.tinfo;
-  var obj = info.objCache.lookup(this.dbxid);
+  var cacheFileName = this.cacheFileName();
+  var obj = info.objCache.lookup(cacheFileName);
   if (obj) {
     // found in object cache, resolve instantly
     return Promise.resolve(obj);
@@ -407,7 +415,7 @@ File.prototype.getJson = function() {
         throw new Error("Error parsing "+info.name+" in "+self.parent.id);
       }
       // add to object cache and return the parsed object
-      return info.objCache.add(self.dbxid, obj);
+      return info.objCache.add(cacheFileName, obj);
     });
   }
 };
