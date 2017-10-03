@@ -29,6 +29,8 @@ mydbx.filesGetMetadata({path: "/Pictures"}).then(function(meta) {
 });
 
 var app = express();
+//app.use(express.static("../gvyweb")); //mhs for testing
+
 app.get("/gvypics/ls", function(req, res) {
   Promise.resolve(true).then(function() {
     return root.possibleUpdate(req.query).then(function() {
