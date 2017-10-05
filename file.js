@@ -138,7 +138,7 @@ function File(parent, dbxmeta, parts, mime) {
   //console.log("File "+this.id+" created");
 }
 
-File.prototype.update = function(dbxmeta, mime) {
+File.prototype.updateProperties = function(dbxmeta, mime) {
   this.name = dbxmeta.name;
   this.dbxid = dbxmeta.id;
   this.rev = dbxmeta.rev;

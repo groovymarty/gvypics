@@ -21,7 +21,7 @@ function Folder(parent, dbxmeta, parts) {
 }
 
 Folder.prototype.isRootFolder = function() {
-  return this === finder.getRootFolder();
+  return this.parent === null;
 };
 
 Folder.prototype.updateProperties = function(dbxmeta) {
@@ -81,13 +81,13 @@ Folder.prototype.update = function(recursive) {
           if (!self.contents) {
             self.contents = new File(self, entry, {id: self.id, num: 0}, File.contentsMime);
           } else {
-            self.contents.update(entry, File.contentsMime);
+            self.contents.updateProperties(entry, File.contentsMime);
           }
         } else if (entry.name.toLowerCase() === "meta.json") {
           if (!self.meta) {
             self.meta = new File(self, entry, {id: self.id, num: 0}, File.metaMime);
           } else {
-            self.meta.update(entry, File.metaMime);
+            self.meta.updateProperties(entry, File.metaMime);
           }
         } else {
           //console.log("Skipping " + entry.name);
@@ -104,20 +104,17 @@ Folder.prototype.update = function(recursive) {
     return true; //done
   }
   
-  function cleanupDeleted(container, what) {
-    var notSeen = Object.keys(container).filter(function(id) {return !(id in idsSeen);});
-    notSeen.forEach(function(id) {
-      console.log(what+" "+id+" deleted");
-      delete container[id];
-    });
-  }
-
   return mydbx.filesListFolder({path: this.path})
     .then(processListFolderResult)
     .then(function() {
       // clean up deleted files and folders
       File.containerNames.forEach(function(containerName) {
-        cleanupDeleted(self[containerName], containerName);
+        var container = self[containerName];
+        var notSeen = Object.keys(container).filter(function(id) {return !(id in idsSeen);});
+        notSeen.forEach(function(id) {
+          console.log(what+" "+id+" deleted");
+          delete container[id];
+        });
       });
       // set last update time
       self.lastUpdate = Date.now();
