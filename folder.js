@@ -33,6 +33,11 @@ Folder.prototype.update = function(recursive) {
   var self = this;
   var idsSeen = {};
   
+  // skip if alt folder
+  if (this.isAltFolder) {
+    return Promise.resolve(true);
+  }
+  
   function processListFolderResult(result) {
     result.entries.forEach(function(entry) {
       var parts;
@@ -113,6 +118,12 @@ Folder.prototype.update = function(recursive) {
         var notSeen = Object.keys(container).filter(function(id) {return !(id in idsSeen);});
         notSeen.forEach(function(id) {
           console.log(what+" "+id+" deleted");
+          var item = container[id];
+          if (item.altParent) {
+            // for example if you delete D17A, remove it from D17
+            // another way would be to force a root update which would rebuild the alt tree
+            delete item.altParent.altFolders[id];
+          }
           delete container[id];
         });
       });
@@ -126,7 +137,55 @@ Folder.prototype.update = function(recursive) {
         // not recursive
         return self; //done
       }
+    })
+    .then(function() {
+      if (self.isRootFolder()) {
+        self.altUpdate();
+      }
+      return true;
+    })
+};
+
+// Create a new alt folder under current folder
+Folder.prototype.addAltFolder = function(id) {
+  if (!this.altFolders) {
+    this.altFolders = {};
+  }
+  var altFolder = new Folder(this, {name: id}, {id: id, num: 0});
+  altFolder.isAltFolder = true; //prevent updates
+  altFolder.altParent = this;
+  this.altFolders[id] = altFolder;
+  return altFolder;
+};
+
+// Add an item (always a folder) to this alt folder
+Folder.prototype.addAltFolderItem = function(item) {
+  this.folders[item.id] = item;
+  item.altParent = this;
+};
+
+// Build the alt folder tree (root folder only)
+Folder.prototype.altUpdate = function() {
+  var self = this;
+  // throw away old tree and build new one
+  this.altFolders = {};
+  // build arrays of child folders by first letter of folder name
+  var letters = {};
+  Object.keys(this.folders).forEach(function(id) {
+    var letter = id.substr(0, 1);
+    if (!(letter in letters)) {
+      letters[letter] = [];
+    }
+    letters[letter].push(self.folders[id]);
+  });
+  // make an alt folder for each first letter
+  Object.keys(letters).forEach(function(letter) {
+    var altFolder = self.addAltFolder(letter);
+    // populate first-letter alt folders with items gathered above
+    letters[letter].forEach(function(folder) {
+      altFolder.addAltFolderItem(folder);
     });
+  });
 };
 
 // Update folder if it's been awhile since it was last updated
@@ -156,33 +215,41 @@ Folder.prototype.freshUpdate = function() {
   return this.possibleUpdate(freshMs);
 };
 
+// Sort items in container by number then by id
+// For root and alt folders all numbers are 0, so this gives sort by id
+// All other folders contain pictures, videos or child folders with numbers
+// If two pictures have same number (like D17M-1 and D17M-1A), sort by id will give right result
+function sortContainer(container) {
+  return Object.keys(container).sort(function(id1, id2) {
+    return (container[id1].num - container[id2].num) || id1.localeCompare(id2);
+  });
+}
+
 Folder.prototype.represent = function() {
   var self = this;
   var rep = {
     name: this.name,
     id: this.id,
-    folders: Object.keys(this.folders).sort(
-      // if root folder use default sort by ids, else sort by last child number
-      this.isRootFolder() ? undefined : function(id1, id2) {
-        return self.folders[id1].num - self.folders[id2].num;
-      }),
-    pictures: Object.keys(this.pictures).sort(function(id1, id2) {
-      return self.pictures[id1].num - self.pictures[id2].num;
-    }),
-    videos: Object.keys(this.videos).sort(function(id1, id2) {
-      return self.videos[id1].num - self.videos[id2].num;
-    })
+    folders: sortContainer(this.altFolders || this.folders),
+    pictures: sortContainer(this.pictures),
+    videos: sortContainer(this.videos)
   };
   // gather names of all items
   rep.names = {};
-  File.containerNames.forEach(function(containerName) {
-    var container = self[containerName];
-    if (container) {
-      Object.keys(container).forEach(function(id) {
-        rep.names[id] = container[id].name;
-      });
-    }
-  });
+  if (this.altFolders) {
+    Object.keys(this.altFolders).forEach(function(id) {
+      rep.names[id] = self.altFolders[id].name;
+    });
+  } else {
+    File.containerNames.forEach(function(containerName) {
+      var container = self[containerName];
+      if (container) {
+        Object.keys(container).forEach(function(id) {
+          rep.names[id] = container[id].name;
+        });
+      }
+    });
+  }
   // add contents.json and meta.json, if they exist
   return Promise.all(['contents', 'meta'].map(function(whichFile) {
     if (self[whichFile]) {
@@ -301,6 +368,8 @@ Folder.prototype.findFolder = function(folderName, childString, tryUpdate) {
       // no more children, we're done
       return Promise.resolve(folder);
     }
+  } else if (this.altFolders && (folderName in this.altFolders)) {
+    return Promise.resolve(this.altFolders[folderName]);
   } else if (tryUpdate) {
     // folder not found, update and try again
     return this.freshUpdate().then(function() {
