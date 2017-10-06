@@ -121,8 +121,8 @@ Folder.prototype.update = function(recursive) {
           var item = container[id];
           if (item.altParent) {
             // for example if you delete D17A, remove it from D17
-            // another way would be to force a root update which would rebuild the alt tree
-            delete item.altParent.altFolders[id];
+            // this probably isn't necessary because we're about to rebuild the alt tree anyway
+            delete item.altParent.folders[id];
           }
           delete container[id];
         });
@@ -146,15 +146,18 @@ Folder.prototype.update = function(recursive) {
     })
 };
 
-// Create a new alt folder under current folder
-Folder.prototype.addAltFolder = function(id) {
+// Return alt folder with specified id, creating if necessary
+Folder.prototype.getAltFolder = function(id, name) {
   if (!this.altFolders) {
     this.altFolders = {};
   }
-  var altFolder = new Folder(this, {name: id}, {id: id, num: 0});
-  altFolder.isAltFolder = true; //prevent updates
-  altFolder.altParent = this;
-  this.altFolders[id] = altFolder;
+  var altFolder = this.altFolders[id];
+  if (!altFolder) {
+    altFolder = new Folder(this, {name: name || id}, {id: id, num: 0});
+    altFolder.isAltFolder = true; //prevent updates
+    altFolder.altParent = this;
+    this.altFolders[id] = altFolder;
+  }
   return altFolder;
 };
 
@@ -163,6 +166,30 @@ Folder.prototype.addAltFolderItem = function(item) {
   this.folders[item.id] = item;
   item.altParent = this;
 };
+
+var secondAltPat = /^[DE](\d+)/;
+
+var eRanges = [{
+  id: "EE001",
+  name: "E001 to 199 - Marty, Jill, Jeff, Heidi",
+  start: 1,
+  end: 199
+},{
+  id: "EE200",
+  name: "E200 to 379 - Pfeifle/Casterline",
+  start: 200,
+  end: 379
+},{
+  id: "EE380",
+  name: "E380 to 499 - Sauser/Cochran",
+  start: 380,
+  end: 499
+},{
+  id: "EE500",
+  name: "E500 to 549 - Ann, Linda, Jean",
+  start: 500,
+  end: 549
+}];
 
 // Build the alt folder tree (root folder only)
 Folder.prototype.altUpdate = function() {
@@ -180,12 +207,53 @@ Folder.prototype.altUpdate = function() {
   });
   // make an alt folder for each first letter
   Object.keys(letters).forEach(function(letter) {
-    var altFolder = self.addAltFolder(letter);
-    // populate first-letter alt folders with items gathered above
+    var altFolder = self.getAltFolder(letter);
+    // populate alt folders with items gathered above
     letters[letter].forEach(function(folder) {
-      altFolder.addAltFolderItem(folder);
+      // is this a special one?  Dnn and Ennn
+      var secondAltId = null;
+      var secondAltName = null;
+      var mr = folder.id.match(secondAltPat);
+      if (mr) {
+        switch (letter) {
+          case "D":
+            // Second level is letter "D" followed by year digits
+            secondAltId = letter + mr[1];
+            break;
+          case "E":
+            // Find second level in table based on number ranges
+            // If not found just add folder to first-level folder
+            var num = parseInt(mr[1]);
+            eRanges.forEach(function(eRange) {
+              if (!secondAltId && num >= eRange.start && num <= eRange.end) {
+                secondAltId = eRange.id;
+                secondAltName = eRange.name;
+              }
+            });
+            break;
+        }
+      }
+      if (secondAltId) {
+        // get (or create) second-level alt folder and add item to it
+        altFolder.getAltFolder(secondAltId, secondAltName).addAltFolderItem(folder);
+      } else {
+        // not special, add to first-level folder based on first letter
+        altFolder.addAltFolderItem(folder);
+      }
     });
   });
+  // make flat lookup map for alt folders
+  this.altFolderMap = {};
+  function addToAltMap(altFolders) {
+    Object.keys(altFolders).forEach(function(id) {
+      var folder = altFolders[id];
+      self.altFolderMap[id] = folder;
+      if (folder.altFolders) {
+        addToAltMap(folder.altFolders);
+      }
+    });
+  }
+  addToAltMap(this.altFolders);
 };
 
 // Update folder if it's been awhile since it was last updated
@@ -227,29 +295,33 @@ function sortContainer(container) {
 
 Folder.prototype.represent = function() {
   var self = this;
+  var myFolders;
+  // get the folders we want to reveal
+  if (this.isRootFolder()) {
+    // for root we normally want to see the alt folders only
+    // but if there aren't any, show the regular ones
+    myFolders = this.altFolders || this.folders;
+  } else if (this.altFolders) {
+    // otherwise combine the regular and alt folders and show all of them
+    myFolders = Object.assign({}, this.folders, this.altFolders);
+  } else {
+    // no alt folders so just show the regular ones
+    myFolders = this.folders;
+  }
   var rep = {
     name: this.name,
     id: this.id,
-    folders: sortContainer(this.altFolders || this.folders),
+    folders: sortContainer(myFolders),
     pictures: sortContainer(this.pictures),
     videos: sortContainer(this.videos)
   };
   // gather names of all items
   rep.names = {};
-  if (this.altFolders) {
-    Object.keys(this.altFolders).forEach(function(id) {
-      rep.names[id] = self.altFolders[id].name;
-    });
-  } else {
-    File.containerNames.forEach(function(containerName) {
-      var container = self[containerName];
-      if (container) {
-        Object.keys(container).forEach(function(id) {
-          rep.names[id] = container[id].name;
-        });
-      }
-    });
-  }
+  [myFolders, this.pictures, this.videos].forEach(function(container) {
+    Object.keys(container).forEach(function(id) {
+      rep.names[id] = container[id].name;
+    });    
+  });
   // add contents.json and meta.json, if they exist
   return Promise.all(['contents', 'meta'].map(function(whichFile) {
     if (self[whichFile]) {
@@ -368,8 +440,8 @@ Folder.prototype.findFolder = function(folderName, childString, tryUpdate) {
       // no more children, we're done
       return Promise.resolve(folder);
     }
-  } else if (this.altFolders && (folderName in this.altFolders)) {
-    return Promise.resolve(this.altFolders[folderName]);
+  } else if (this.altFolderMap && (folderName in this.altFolderMap)) {
+    return Promise.resolve(this.altFolderMap[folderName]);
   } else if (tryUpdate) {
     // folder not found, update and try again
     return this.freshUpdate().then(function() {
