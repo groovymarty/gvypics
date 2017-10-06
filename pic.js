@@ -80,9 +80,32 @@ function getErrorMessage(error) {
   }
 }
 
+var eRanges = [{
+  id: "EE001",
+  name: "E001 to 199 - Marty, Jill, Jeff, Heidi",
+  start: 1,
+  end: 199
+},{
+  id: "EE200",
+  name: "E200 to 379 - Pfeifle/Casterline",
+  start: 200,
+  end: 379
+},{
+  id: "EE380",
+  name: "E380 to 499 - Sauser/Cochran",
+  start: 380,
+  end: 499
+},{
+  id: "EE500",
+  name: "E500 to 549 - Ann, Linda, Jean",
+  start: 500,
+  end: 549
+}];
+
 module.exports = {
   parseFolder: parseFolder,
   parseFile: parseFile,
   parse: parse,
-  getErrorMessage: getErrorMessage
+  getErrorMessage: getErrorMessage,
+  eRanges: eRanges
 };

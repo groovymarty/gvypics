@@ -161,86 +161,52 @@ Folder.prototype.getAltFolder = function(id, name) {
   return altFolder;
 };
 
-// Add an item (always a folder) to this alt folder
+// Add an item (always a regular folder) to this alt folder
 Folder.prototype.addAltFolderItem = function(item) {
   this.folders[item.id] = item;
   item.altParent = this;
 };
 
-var secondAltPat = /^[DE](\d+)/;
-
-var eRanges = [{
-  id: "EE001",
-  name: "E001 to 199 - Marty, Jill, Jeff, Heidi",
-  start: 1,
-  end: 199
-},{
-  id: "EE200",
-  name: "E200 to 379 - Pfeifle/Casterline",
-  start: 200,
-  end: 379
-},{
-  id: "EE380",
-  name: "E380 to 499 - Sauser/Cochran",
-  start: 380,
-  end: 499
-},{
-  id: "EE500",
-  name: "E500 to 549 - Ann, Linda, Jean",
-  start: 500,
-  end: 549
-}];
-
 // Build the alt folder tree (root folder only)
 Folder.prototype.altUpdate = function() {
   var self = this;
-  // throw away old tree and build new one
+  // throw away old alt tree and build new one
   this.altFolders = {};
-  // build arrays of child folders by first letter of folder name
-  var letters = {};
   Object.keys(this.folders).forEach(function(id) {
-    var letter = id.substr(0, 1);
-    if (!(letter in letters)) {
-      letters[letter] = [];
+    var folder = self.folders[id];
+    // get (or create) first-level alt folder based on first letter of id
+    var altFolder = self.getAltFolder(id.substr(0, 1));
+    var secondAltId = null;
+    var secondAltName = null;
+    // is this a special one?  Dnn and Ennn
+    var mr = id.match(/^([DE])(\d+)/);
+    if (mr) {
+      switch (mr[1]) { //letter
+        case "D":
+          // Second level is letter followed by year digits
+          // This is what the whole pattern matched so use mr[0]
+          secondAltId = mr[0];
+          break;
+        case "E":
+          // Find second level in table based on number ranges
+          // If not found just add to first-level folder
+          var num = parseInt(mr[2]);
+          pic.eRanges.forEach(function(range) {
+            if (!secondAltId && num >= range.start && num <= range.end) {
+              secondAltId = range.id;
+              secondAltName = range.name;
+            }
+          });
+          break;
+      }
     }
-    letters[letter].push(self.folders[id]);
-  });
-  // make an alt folder for each first letter
-  Object.keys(letters).forEach(function(letter) {
-    var altFolder = self.getAltFolder(letter);
-    // populate alt folders with items gathered above
-    letters[letter].forEach(function(folder) {
-      // is this a special one?  Dnn and Ennn
-      var secondAltId = null;
-      var secondAltName = null;
-      var mr = folder.id.match(secondAltPat);
-      if (mr) {
-        switch (letter) {
-          case "D":
-            // Second level is letter "D" followed by year digits
-            secondAltId = letter + mr[1];
-            break;
-          case "E":
-            // Find second level in table based on number ranges
-            // If not found just add folder to first-level folder
-            var num = parseInt(mr[1]);
-            eRanges.forEach(function(eRange) {
-              if (!secondAltId && num >= eRange.start && num <= eRange.end) {
-                secondAltId = eRange.id;
-                secondAltName = eRange.name;
-              }
-            });
-            break;
-        }
-      }
-      if (secondAltId) {
-        // get (or create) second-level alt folder and add item to it
-        altFolder.getAltFolder(secondAltId, secondAltName).addAltFolderItem(folder);
-      } else {
-        // not special, add to first-level folder based on first letter
-        altFolder.addAltFolderItem(folder);
-      }
-    });
+    if (secondAltId) {
+      // get (or create) second-level alt folder and add item to it
+      altFolder.getAltFolder(secondAltId, secondAltName).addAltFolderItem(folder);
+    } else {
+      // not special, add to first-level folder based on first letter
+      altFolder.addAltFolderItem(folder);
+    }
   });
   // make flat lookup map for alt folders
   this.altFolderMap = {};
@@ -303,6 +269,7 @@ Folder.prototype.represent = function() {
     myFolders = this.altFolders || this.folders;
   } else if (this.altFolders) {
     // otherwise combine the regular and alt folders and show all of them
+    // for example the alt folder for "D" contains alt folders like "D12" and regular ones like "DOC"
     myFolders = Object.assign({}, this.folders, this.altFolders);
   } else {
     // no alt folders so just show the regular ones
@@ -311,6 +278,7 @@ Folder.prototype.represent = function() {
   var rep = {
     name: this.name,
     id: this.id,
+    parent: (this.altParent || this.parent || {id: ""}).id,
     folders: sortContainer(myFolders),
     pictures: sortContainer(this.pictures),
     videos: sortContainer(this.videos)
