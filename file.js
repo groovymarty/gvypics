@@ -54,13 +54,13 @@ var sizeInfo = {
   'sm': {
     dbxsz: "w128h128",
     cacheDirName: "pic-sm",
-    cacheMaxFiles: 100
+    cacheMaxFiles: 1000
     //cacheDir and cache added by makeCacheDir()
   },
   'md': {
     dbxsz: "w640h480",
     cacheDirName: "pic-md",
-    cacheMaxFiles: 100
+    cacheMaxFiles: 1000
   },
   'lg': {
     dbxsz: "w1024h768",

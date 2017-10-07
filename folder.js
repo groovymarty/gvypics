@@ -35,7 +35,7 @@ Folder.prototype.update = function(recursive) {
   
   // skip if alt folder
   if (this.isAltFolder) {
-    return Promise.resolve(true);
+    return Promise.resolve(this);
   }
   
   function processListFolderResult(result) {
@@ -72,7 +72,7 @@ Folder.prototype.update = function(recursive) {
                 if (!(parts.id in container)) {
                   container[parts.id] = new File(self, entry, parts, mime);
                 } else {
-                  container[parts.id].update(entry, mime);
+                  container[parts.id].updateProperties(entry, mime);
                 }
               }
             } else {
@@ -135,14 +135,14 @@ Folder.prototype.update = function(recursive) {
         }));
       } else {
         // not recursive
-        return self; //done
+        return true; //done
       }
     })
     .then(function() {
       if (self.isRootFolder()) {
         self.altUpdate();
       }
-      return true;
+      return self;
     })
 };
 
@@ -275,10 +275,12 @@ Folder.prototype.represent = function() {
     // no alt folders so just show the regular ones
     myFolders = this.folders;
   }
+  // The root folder's name is "/", id is "", and parent is "0"
+  // Note "0" is an illegal id value
   var rep = {
     name: this.name,
     id: this.id,
-    parent: (this.altParent || this.parent || {id: ""}).id,
+    parent: (this.altParent || this.parent || {id: "0"}).id,
     folders: sortContainer(myFolders),
     pictures: sortContainer(this.pictures),
     videos: sortContainer(this.videos)
@@ -304,8 +306,8 @@ Folder.prototype.represent = function() {
   })).then(function() {
     // if folder has contents.json, gather names and metadata for all items
     if (self.contents) {
-      rep.contentsNames = {};
-      rep.contentsMeta = {};
+      rep.contNames = {};
+      rep.contMeta = {};
       return self.contents.getJson().then(function(contents) {
         // do photos, videos and folders
         return Promise.all(File.containerNames.map(function(containerName) {
@@ -317,7 +319,7 @@ Folder.prototype.represent = function() {
               // find the item (might be folder or file)
               return finder.parseAndFind(id).then(function(item) {
                 // add item name to our result
-                rep.contentsNames[item.id] = item.name;
+                rep.contNames[item.id] = item.name;
                 // Overwrite id in container array to make sure it's canonical,
                 // for example change "A19-385-sherri-1956.jpg" to "A19-385".
                 // This lets the front end use the ids to look up metadata, names, etc.
@@ -331,7 +333,7 @@ Folder.prototype.represent = function() {
                     // does this item have metadata?
                     if (item.id in meta) {
                       // add item's metadata to our result
-                      rep.contentsMeta[item.id] = meta[item.id];
+                      rep.contMeta[item.id] = meta[item.id];
                     }
                     return true; //done
                   });

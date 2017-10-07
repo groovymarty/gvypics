@@ -21,11 +21,11 @@ function findFile(folder, parts) {
   return folder.findFile(parts.id, parts.type, true);
 }
 
-function parseAndFindFolder(id) {
+function parseAndFindFolder(id, limitMs) {
   var parts = pic.parseFolder(id);
   if (parts) {
     return findFolder(parts).then(function(folder) {
-      return folder.possibleUpdate();
+      return folder.possibleUpdate(limitMs);
     });
   } else {
     throw new Error("Parse failed for "+id);
