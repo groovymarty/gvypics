@@ -10,7 +10,7 @@ var typeInfo = {
     name: "picture",
     containerName: "pictures",
     cacheDirName: "pictures",
-    cacheMaxFiles: 30,
+    cacheMaxFiles: 50,
     //cacheDir and cache added by makeCacheDir()
     extToMime: {
       ".jpg": {name: "image/jpeg"}, //tinfo pointer added below to each mime
@@ -23,7 +23,7 @@ var typeInfo = {
     name: "video",
     containerName: "videos",
     cacheDirName: "videos",
-    cacheMaxFiles: 5,
+    cacheMaxFiles: 30,
     extToMime: {
       ".mp4": {name: "video/mp4"},
       ".mov": {name: "video/quicktime"},
@@ -247,8 +247,12 @@ File.prototype.readStream = function() {
     });
     ws.on('close', function() {
       if (!somethingWentWrong) {
-        fs.renameSync(cachePathTmp, cachePath);
-        tinfo.cache.addFile(cacheFileName);
+        try {
+          fs.renameSync(cachePathTmp, cachePath);
+          tinfo.cache.addFile(cacheFileName);
+        } catch (e) {
+          console.log("rename failed with "+e.code+" for "+cachePathTmp);
+        }
       }
     });
     rs.pipe(ws);

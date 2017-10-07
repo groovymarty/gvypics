@@ -120,7 +120,12 @@ Cache.prototype.removeOldestFile = function() {
   // found one? if so delete it.
   if (f) {
     this.nOldFiles -= 1;
-    fs.unlink(path.join(this.cacheDir, f.name));
+    try {
+      var cachePath = path.join(this.cacheDir, f.name);
+      fs.unlinkSync(cachePath);
+    } catch (e) {
+      console.log("error "+e.code+" removing oldest file "+cachePath);
+    }
   } else {
     console.log("!!! array empty but old="+this.nOldFiles);
     this.nOldFiles = 0;
