@@ -16,7 +16,8 @@ if (!fs.existsSync(cacheBaseDir)) {
 File.setCacheBaseDir(cacheBaseDir);
 
 mydbx.filesGetMetadata({path: "/Pictures"}).then(function(meta) {
-  root = new Folder(null, meta, {id: "/"});
+  meta.name = "/";
+  root = new Folder(null, meta, {id: ""});
   finder.setRootFolder(root);
   return root.update(initLoadAll).then(function() {
     console.log("root update finished");
@@ -45,33 +46,15 @@ app.get("/gvypics/ls", function(req, res) {
   });
 });
 
-// List specified folder or file, returns JSON
+// List specified folder, returns JSON
 app.get("/gvypics/ls/:id", function(req, res) {
   Promise.resolve(true).then(function() {
-    var id = req.params.id;
-    var parts = pic.parse(id);
-    if (parts) {
-      return finder.findFolder(parts).then(function(folder) {
-        if (parts.what === 'folder') {
-          return folder.possibleUpdate(req.query).then(function() {
-            return folder.represent().then(function(rep) {
-              res.json(rep);
-              return true; //done
-            });
-          });
-        } else if (parts.what === 'file') {
-          return finder.findFile(folder, parts).then(function(file) {
-            // no promise needed for file.represent()
-            res.json(file.represent());
-            return true; //done
-          });
-        } else {
-          throw new Error("Can't handle what="+parts.what);
-        }
+    return finder.parseAndFindFolder(req.params.id, req.query).then(function(folder) {
+      return folder.represent().then(function(rep) {
+        res.json(rep);
+        return true; //done
       });
-    } else {
-      throw new Error("Parse failed for "+id);
-    }
+    });
   })
   .catch(function(error) {
     res.status(404).send(pic.getErrorMessage(error));
