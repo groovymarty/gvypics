@@ -144,6 +144,10 @@ Folder.prototype.update = function(recursive) {
       }
       return self;
     })
+    .catch(function(err) {
+      console.log("error updating folder "+self.id+", path: "+self.path+": "+pic.getErrorMessage(err));
+      throw err;
+    });
 };
 
 // Return alt folder with specified id, creating if necessary

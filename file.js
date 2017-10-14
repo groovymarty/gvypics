@@ -23,7 +23,7 @@ var typeInfo = {
     name: "video",
     containerName: "videos",
     cacheDirName: "videos",
-    cacheMaxFiles: 30,
+    cacheMaxFiles: 50,
     extToMime: {
       ".mp4": {name: "video/mp4"},
       ".mov": {name: "video/quicktime"},
@@ -65,7 +65,7 @@ var sizeInfo = {
   'lg': {
     dbxsz: "w1024h768",
     cacheDirName: "pic-lg",
-    cacheMaxFiles: 100
+    cacheMaxFiles: 1000
   }
 };
 
@@ -75,7 +75,7 @@ var sizes = Object.keys(sizeInfo);
 var contentsInfo = {
   name: "contents.json",
   cacheDirName: "contents",
-  cacheMaxFiles: 100,
+  cacheMaxFiles: 1000,
   objTimeout: 60000
 };
 
@@ -87,7 +87,7 @@ var contentsMime = {
 var metaInfo = {
   name: "meta.json",
   cacheDirName: "meta",
-  cacheMaxFiles: 100,
+  cacheMaxFiles: 1000,
   objTimeout: 60000
 };
 
