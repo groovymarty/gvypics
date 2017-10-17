@@ -362,14 +362,6 @@ Folder.prototype.represent = function() {
   });
 };
 
-Folder.prototype.isEmpty = function() {
-  var f;
-  for (f in this.files) {
-    return false;
-  }
-  return true;
-};
-
 Folder.prototype.count = function(recursive) {
   var self = this;
   var myCount = {
