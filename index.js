@@ -6,6 +6,7 @@ var mydbx = require("./mydbx.js");
 var Folder = require("./folder.js");
 var File = require("./file.js");
 var finder = require("./finder.js");
+var auth = require("./auth.js");
 var root = {};
 var initLoadAll = true;
 var cacheBaseDir = "./cache";
@@ -153,6 +154,32 @@ app.get("/gvypics/vid/:id", function(req, res) {
   .catch(function(error) {
     res.status(404).send(pic.getErrorMessage(error));
   });
+});
+
+// Log in
+app.get("/gvypics/login", function(req, res) {
+  var tok = auth.processLogin(req.query.user, req.query.pw);
+  if (tok) {
+    res.status(200).send(tok);
+  } else {
+    res.status(403).end(); //forbidden
+  }
+});
+
+// Log out
+app.get("/gvypics/logout", function(req, res) {
+  auth.processLogout(req.query.tok);
+  res.status(200).end();
+});
+
+// Get user info
+app.get("/gvypics/user", function(req, res) {
+  var user = auth.validateToken(req.query.tok);
+  if (user) {
+    res.status(200).json(user);
+  } else {
+    res.status(401).end();
+  }
 });
 
 app.listen(8081, function() {

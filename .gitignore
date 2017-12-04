@@ -1,5 +1,6 @@
 /node_modules
 .dropbox-access-token
+.users
 npm-debug.log
 gvypics.komodoproject
 /cache
