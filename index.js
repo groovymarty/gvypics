@@ -159,6 +159,7 @@ app.get("/gvypics/vid/:id", function(req, res) {
 // Log in
 app.get("/gvypics/login", function(req, res) {
   var tok = auth.processLogin(req.query.user, req.query.pw);
+  res.set("Content-Type", "text/plain");
   if (tok) {
     res.status(200).send(tok);
   } else {
@@ -169,6 +170,7 @@ app.get("/gvypics/login", function(req, res) {
 // Log out
 app.get("/gvypics/logout", function(req, res) {
   auth.processLogout(req.query.tok);
+  res.set("Content-Type", "text/plain");
   res.status(200).end();
 });
 
