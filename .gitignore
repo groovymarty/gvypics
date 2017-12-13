@@ -2,5 +2,6 @@
 .dropbox-access-token
 .users
 npm-debug.log
+package-lock.json
 gvypics.komodoproject
 /cache

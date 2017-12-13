@@ -143,7 +143,7 @@ File.prototype.updateProperties = function(dbxmeta, mime) {
   this.dbxid = dbxmeta.id;
   this.rev = dbxmeta.rev;
   this.mime = mime;
-}
+};
 
 File.prototype.represent = function() {
   return {
@@ -170,7 +170,11 @@ File.prototype.cacheFileName = function() {
 // Touch access time to indicate recent use
 function touchFile(path) {
   var nowSec = Math.trunc(Date.now()/1000);
-  fs.utimes(path, nowSec, nowSec);
+  fs.utimes(path, nowSec, nowSec, function (err) {
+    if (err) {
+      console.log("utimes failed for "+path);
+    }
+  });
 }
 
 // Return read stream for file
@@ -341,7 +345,7 @@ function writeFileAsyncWithRename(path, data, callback) {
       // failure, cleanup our temp file
       if (cleanupTmpFile) {
         try {
-          fs.unlink(pathTmp);
+          fs.unlinkSync(pathTmp);
         } catch (e) {}
       }
     }
