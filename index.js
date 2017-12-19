@@ -91,6 +91,23 @@ app.get("/gvypics/meta/:id", function(req, res) {
   getJsonFile(req, res, 'meta');
 });
 
+// Set header for download
+function possibleDownload(req, res, file, nameTail) {
+  if (req.query.dl) {
+    var dlFileName = file.name;
+    if (nameTail) {
+      var i = file.name.lastIndexOf('.');
+      if (i >= 0) {
+        // insert tail before extension
+        dlFileName = file.name.substr(0, i) + nameTail + file.name.substr(i);
+      } else {
+        dlFileName += nameTail;
+      }
+    }
+    res.set("Content-Disposition", "attachment; filename="+dlFileName);
+  }
+}
+
 // Return a picture or thumbnail (if sz specified)
 app.get("/gvypics/pic/:id", function(req, res) {
   Promise.resolve(true).then(function() {
@@ -102,11 +119,13 @@ app.get("/gvypics/pic/:id", function(req, res) {
           return finder.findFile(folder, parts).then(function(file) {
             if (req.query.sz) {
               return file.getThumbnail(req.query.sz).then(function(data) {
+                possibleDownload(req, res, file, "-"+req.query.sz);
                 res.set("Content-Type", "image/jpeg");
                 res.end(data, 'binary');
                 return true; //done
               });
             } else {
+              possibleDownload(req, res, file);
               res.set("Content-Type", file.mime.name);
               file.readStream().pipe(res);
               return true; //done
@@ -134,6 +153,7 @@ app.get("/gvypics/vid/:id", function(req, res) {
       if (parts.type === "V") {
         return finder.findFolder(parts).then(function(folder) {
           return finder.findFile(folder, parts).then(function(file) {
+            possibleDownload(req, res, file);
             res.set("Content-Type", file.mime.name);
             var rs = file.readStream();
             // for videos, tell read stream to stop if our connection gets closed
