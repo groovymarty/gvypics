@@ -69,11 +69,15 @@ function parse(name) {
   return parseFile(name) || parseFolder(name);
 }
 
+function stringify(x) {
+  return typeof x === 'string' ? x : JSON.stringify(x);
+}
+
 function getErrorMessage(error) {
   if (error.message) {
-    return error.message;
+    return stringify(error.message);
   } else if (error.error) {
-    return error.error;
+    return stringify(error.error);
   } else {
     console.log(error);
     return "An error happened!";

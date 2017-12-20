@@ -309,49 +309,54 @@ Folder.prototype.represent = function() {
     }
   })).then(function() {
     // if folder has contents.json, gather names and metadata for all items
+    // Originally I wrote this using Promise.all() to run all the requests in parallel,
+    // but Dropbox returned errors saying "too many requests"!  So now it's sequential.
     if (self.contents) {
       rep.contNames = {};
       rep.contMeta = {};
       return self.contents.getJson().then(function(contents) {
+        // promise chain for sequential execution
+        var chain = Promise.resolve(true);
         // do photos, videos and folders
-        return Promise.all(File.containerNames.map(function(containerName) {
+        File.containerNames.forEach(function(containerName) {
           var container = contents[containerName];
           if (container) {
             // do all items in this container
             // note that contents containers are arrays, not dictionaries
-            return Promise.all(container.map(function(id, i) {
+            container.forEach(function(id, i) {
               // find the item (might be folder or file)
-              return finder.parseAndFind(id).then(function(item) {
-                // add item name to our result
-                rep.contNames[item.id] = item.name;
-                // Overwrite id in container array to make sure it's canonical,
-                // for example change "A19-385-sherri-1956.jpg" to "A19-385".
-                // This lets the front end use the ids to look up metadata, names, etc.
-                // The container array we're updating is the one in the "contents" object,
-                // which is in the object cache and also pointed to by rep.contents.
-                // All these are refs to the same object so they will all see the change.
-                container[i] = item.id;
-                // does item's parent folder have metadata?
-                if (item.parent.meta) {
-                  return item.parent.meta.getJson().then(function(meta) {
-                    // does this item have metadata?
-                    if (item.id in meta) {
-                      // add item's metadata to our result
-                      rep.contMeta[item.id] = meta[item.id];
-                    }
-                    return true; //done
-                  });
-                } else {
-                  return true; //no meta
-                }
-              }).catch(function(err) {
-                console.log("error gathering id "+id+": "+pic.getErrorMessage(err));
+              chain = chain.then(function() {
+                return finder.parseAndFind(id).then(function(item) {
+                  // add item name to our result
+                  rep.contNames[item.id] = item.name;
+                  // Overwrite id in container array to make sure it's canonical,
+                  // for example change "A19-385-sherri-1956.jpg" to "A19-385".
+                  // This lets the front end use the ids to look up metadata, names, etc.
+                  // The container array we're updating is the one in the "contents" object,
+                  // which is in the object cache and also pointed to by rep.contents.
+                  // All these are refs to the same object so they will all see the change.
+                  container[i] = item.id;
+                  // does item's parent folder have metadata?
+                  if (item.parent.meta) {
+                    return item.parent.meta.getJson().then(function(meta) {
+                      // does this item have metadata?
+                      if (item.id in meta) {
+                        // add item's metadata to our result
+                        rep.contMeta[item.id] = meta[item.id];
+                      }
+                      return true; //done
+                    });
+                  } else {
+                    return true; //no meta
+                  }
+                }).catch(function(err) {
+                  console.log("error gathering id "+id+": "+pic.getErrorMessage(err));
+                });
               });
-            }));
-          } else {
-            return true; //no container
+            });
           }
-        }));
+        });
+        return chain;
       });
     } else {
       return true; //no contents
