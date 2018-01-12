@@ -117,7 +117,7 @@ Folder.prototype.update = function(recursive) {
         var container = self[containerName];
         var notSeen = Object.keys(container).filter(function(id) {return !(id in idsSeen);});
         notSeen.forEach(function(id) {
-          console.log(what+" "+id+" deleted");
+          console.log(id+" deleted");
           var item = container[id];
           if (item.altParent) {
             // for example if you delete D17A, remove it from D17
