@@ -1,12 +1,14 @@
 #!/usr/bin/env nodejs
 var fs = require('fs');
 var express = require('express');
+var bodyParser = require('body-parser');
 var pic = require("./pic.js");
 var mydbx = require("./mydbx.js");
 var Folder = require("./folder.js");
 var File = require("./file.js");
 var finder = require("./finder.js");
 var auth = require("./auth.js");
+var metaChg = require("./metachg.js");
 var root = {};
 var initLoadAll = true;
 var cacheBaseDir = "./cache";
@@ -16,9 +18,9 @@ if (!fs.existsSync(cacheBaseDir)) {
 }
 File.setCacheBaseDir(cacheBaseDir);
 
-mydbx.filesGetMetadata({path: "/Pictures"}).then(function(meta) {
-  meta.name = "/";
-  root = new Folder(null, meta, {id: ""});
+mydbx.filesGetMetadata({path: "/Pictures"}).then(function(dbxmeta) {
+  dbxmeta.name = "/";
+  root = new Folder(null, dbxmeta, {id: ""});
   finder.setRootFolder(root);
   return root.update(initLoadAll).then(function() {
     console.log("root update finished");
@@ -31,6 +33,7 @@ mydbx.filesGetMetadata({path: "/Pictures"}).then(function(meta) {
 });
 
 var app = express();
+app.use(bodyParser.json());
 //app.use(express.static("../gvyweb")); //mhs for testing
 
 app.get("/gvypics/ls", function(req, res) {
@@ -204,6 +207,24 @@ app.get("/gvypics/user", function(req, res) {
   }
 });
 
-app.listen(8081, function() {
-  console.log("Server listening on port 8081");
+// Post metadata changes
+app.post("/gvypics/metachgs", function(req, res) {
+  var user = auth.validateToken(req.body.token);
+  if (user) {
+    if (Array.isArray(req.body.chgs)) {
+      metaChg.addChanges(user, req.body.chgs);
+      res.status(200).end();
+    } else {
+      res.status(404).send("Array expected");
+    }
+  } else {
+    res.status(401).end(); //unauthorized
+  }
+});
+
+metaChg.readJournal();
+
+var port = 8081;
+app.listen(port, function() {
+  console.log("Server listening on port "+port);
 });

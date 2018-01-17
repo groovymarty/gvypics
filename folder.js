@@ -2,6 +2,7 @@ var mydbx = require("./mydbx.js");
 var pic = require("./pic.js");
 var File = require("./file.js");
 var finder = require("./finder.js");
+var metaChg = require("./metachg.js");
 
 var freshMs = 30*1000;       //update is fresh for 30 sec
 var staleMs = 6*60*60*1000;  //update is stale after 6 hrs
@@ -363,6 +364,10 @@ Folder.prototype.represent = function() {
     }
   }).then(function() {
     // final result
+    rep.meta = metaChg.applyChanges(rep.meta || {}, Object.keys(rep.names));
+    if (rep.contMeta) {
+      rep.contMeta = metaChg.applyChanges(rep.contMeta, Object.key(rep.contNames));
+    }
     return rep;
   });
 };
