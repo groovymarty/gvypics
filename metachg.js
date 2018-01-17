@@ -77,6 +77,7 @@ function stopJournalTimer() {
 function startJournalTimer() {
   stopJournalTimer();
   journalTimer = setTimeout(function() {
+    journalTimer = null;
     if (ws) {
       console.log("closing journal");
       ws.end();
