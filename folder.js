@@ -366,7 +366,7 @@ Folder.prototype.represent = function() {
     // final result
     rep.meta = metaChg.applyChanges(rep.meta || {}, Object.keys(rep.names));
     if (rep.contMeta) {
-      rep.contMeta = metaChg.applyChanges(rep.contMeta, Object.key(rep.contNames));
+      rep.contMeta = metaChg.applyChanges(rep.contMeta, Object.keys(rep.contNames));
     }
     return rep;
   });
