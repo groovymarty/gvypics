@@ -213,6 +213,7 @@ app.post("/gvypics/metachgs", function(req, res) {
   if (user) {
     if (Array.isArray(req.body.chgs)) {
       metaChg.addChanges(user, req.body.chgs);
+      res.set("Content-Type", "text/plain");
       res.status(200).end();
     } else {
       res.status(404).send("Array expected");
