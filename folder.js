@@ -76,7 +76,7 @@ Folder.prototype.update = function(recursive) {
                   container[parts.id].updateProperties(entry, mime);
                 }
               }
-            } else {
+            } else if (parts.ext !== ".xpng") {
               console.log("**** Ignoring "+entry.name+", unknown ext "+parts.ext);
             }
           } else {
