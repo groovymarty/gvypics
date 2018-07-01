@@ -345,6 +345,15 @@ Folder.prototype.represent = function() {
                         // add item's metadata to our result
                         rep.contMeta[item.id] = meta[item.id];
                       }
+                      // if parent folder is rated, supply default rating if rating absent
+                      if ('_folder' in meta && meta._folder.rated) {
+                        if (!rep.contMeta[item.id]) {
+                          rep.contMeta[item.id] = {};
+                        }
+                        if (!('rating' in rep.contMeta[item.id])) {
+                          rep.contMeta[item.id].rating = 3;
+                        }
+                      }
                       return true; //done
                     });
                   } else {
@@ -364,7 +373,7 @@ Folder.prototype.represent = function() {
     }
   }).then(function() {
     // final result
-    rep.meta = metaChg.applyChanges(rep.meta || {}, Object.keys(rep.names));
+    rep.meta = metaChg.applyChanges(rep.meta || {}, Object.keys(rep.names).splice(0, 0, '_folder'));
     if (rep.contMeta) {
       rep.contMeta = metaChg.applyChanges(rep.contMeta, Object.keys(rep.contNames));
     }
