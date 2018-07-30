@@ -104,7 +104,7 @@ Folder.prototype.update = function(recursive) {
     });
     if (result.has_more) {
       // return another promise to keep chain going
-      return mydbx.fileListFolderContinue({cursor: result.cursor})
+      return mydbx.filesListFolderContinue({cursor: result.cursor})
         .then(processListFolderResult);
     }
     return true; //done
