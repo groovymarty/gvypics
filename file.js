@@ -29,7 +29,8 @@ var typeInfo = {
       ".mov": {name: "video/quicktime"},
       ".avi": {name: "video/x-msvideo"},
       ".wmv": {name: "video/x-ms-wmv"},
-      ".3gp": {name: "video/3gpp"}
+      ".3gp": {name: "video/3gpp"},
+      ".webm": {name: "video/webm"}
     }
   }
 };
