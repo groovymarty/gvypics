@@ -131,6 +131,7 @@ function setCacheBaseDir(baseDir) {
 function File(parent, dbxmeta, parts, mime) {
   this.parent = parent;
   this.name = dbxmeta.name;
+  this.size = dbxmeta.size;
   this.dbxid = dbxmeta.id;
   this.rev = dbxmeta.rev;
   this.id = parts.id;
@@ -289,7 +290,7 @@ File.prototype.requestDownload = function() {
     Object.keys(res.headers).forEach(function(name) {
       switch (name.toLowerCase()) {
         // keep only these
-        case "content-length":
+        //case "content-length":
         case "etag":
           break;
         default:

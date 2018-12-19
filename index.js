@@ -130,6 +130,7 @@ app.get("/gvypics/pic/:id", function(req, res) {
             } else {
               possibleDownload(req, res, file);
               res.set("Content-Type", file.mime.name);
+              res.set("Content-Length", file.size);
               file.readStream().pipe(res);
               return true; //done
             }
@@ -158,6 +159,7 @@ app.get("/gvypics/vid/:id", function(req, res) {
           return finder.findFile(folder, parts).then(function(file) {
             possibleDownload(req, res, file);
             res.set("Content-Type", file.mime.name);
+            res.set("Content-Length", file.size);
             var rs = file.readStream();
             // for videos, tell read stream to stop if our connection gets closed
             req.on('close', function() {
