@@ -1,6 +1,7 @@
 var fs = require('fs');
 var path = require('path');
 var request = require('request');
+var stream = require('stream');
 var mydbx = require("./mydbx.js");
 var Cache = require("./cache.js");
 var ObjCache = require("./objcache.js");
@@ -179,9 +180,43 @@ function touchFile(path) {
   });
 }
 
+// Adapted from https://github.com/stephenplusplus/range-stream
+var Transform = stream.Transform;
+function DoRange(options) {
+  this.istart = options.start || 0;
+  this.iend = (options.end + 1) || 0;
+  this.bytesReceived = 0;
+  this.lastByteFound = false;
+  Transform.call(this, options);
+}
+
+// Crazy Javascript inheritance stuff..
+var tmp = function() {};
+tmp.prototype = Transform.prototype;
+DoRange.prototype = new tmp();
+DoRange.prototype.constructor = DoRange;
+
+// Implement Transform that keeps only the specified byte range and throws away the rest
+DoRange.prototype._transform = function(chunk, enc, next) {
+  this.bytesReceived += chunk.length;
+
+  if (!this.lastByteFound && this.bytesReceived >= this.istart) {
+    if (this.istart - (this.bytesReceived - chunk.length) > 0) {
+      chunk = chunk.slice(this.istart - (this.bytesReceived - chunk.length));
+    }
+    if (this.iend <= this.bytesReceived) {
+      this.push(chunk.slice(0, chunk.length - (this.bytesReceived - this.iend)));
+      this.lastByteFound = true;
+    } else {
+      this.push(chunk);
+    }
+  }
+  next();
+};
+
 // Return read stream for file
 // If file is in cache return file stream, else request download
-File.prototype.readStream = function() {
+File.prototype.readStream = function(options) {
   var self = this;
   var tinfo = this.mime.tinfo;
   var cacheFileName = this.cacheFileName();
@@ -214,7 +249,7 @@ File.prototype.readStream = function() {
     //console.log(this.id+" found in cache");
     touchFile(cachePath);
     tinfo.cache.touchFile(cacheFileName);
-    rs= fs.createReadStream(cachePath);
+    rs= fs.createReadStream(cachePath, options);
     rs.on('error', function(err) {
       console.log("read failed with "+err.code+" for "+self.id+", cleaning up");
       cleanup({rs: 1});
@@ -223,47 +258,57 @@ File.prototype.readStream = function() {
       console.log("read "+self.id+" stopped, cleaning up");
       cleanup({rs: 1});
     });
+    return rs;
   } else {
     //console.log(this.id+" not in cache, downloading");
     rs = this.requestDownload();
-    cachePathTmp = cachePath + "_tmp";
-    ws = fs.createWriteStream(cachePathTmp, {flags: "wx"});
-    rs.on('error', function(err) {
-      console.log("download failed with "+err.code+" for "+self.id+", cleaning up");
-      cleanup({all: 1});
-    });
-    rs.on('stop', function() {
-      console.log("download "+self.id+" stopped, cleaning up");
-      cleanup({all: 1});
-    });
-    ws.on('error', function(err) {
-      // If two requests for same file collide, one will get EEXIST error
-      // Ignore error and let the other request continue to write file
-      if (err.code === "EEXIST") {
-        console.log("ignoring EEXIST for "+cachePathTmp);
-        cleanup({ws: 1});
-      } else {
-        console.log("write failed with "+err.code+" for "+cachePathTmp+", cleaning up");
-        cleanup({ws: 1, tmp: 1});
-      }
-    });
-    ws.on('unpipe', function() {
-      console.log("unpipe for "+cachePathTmp+", cleaning up");
-      cleanup({ws: 1, tmp: 1});
-    });
-    ws.on('close', function() {
-      if (!somethingWentWrong) {
-        try {
-          fs.renameSync(cachePathTmp, cachePath);
-          tinfo.cache.addFile(cacheFileName);
-        } catch (e) {
-          console.log("rename failed with "+e.code+" for "+cachePathTmp);
+    if (!options.start) {
+      // entire file requested, write to cache as it is read
+      cachePathTmp = cachePath + "_tmp";
+      ws = fs.createWriteStream(cachePathTmp, {flags: "wx"});
+      rs.on('error', function(err) {
+        console.log("download failed with "+err.code+" for "+self.id+", cleaning up");
+        cleanup({all: 1});
+      });
+      rs.on('stop', function() {
+        console.log("download "+self.id+" stopped, cleaning up");
+        cleanup({all: 1});
+      });
+      ws.on('error', function(err) {
+        // If two requests for same file collide, one will get EEXIST error
+        // Ignore error and let the other request continue to write file
+        if (err.code === "EEXIST") {
+          console.log("ignoring EEXIST for "+cachePathTmp);
+          cleanup({ws: 1});
+        } else {
+          console.log("write failed with "+err.code+" for "+cachePathTmp+", cleaning up");
+          cleanup({ws: 1, tmp: 1});
         }
-      }
-    });
-    rs.pipe(ws);
+      });
+      ws.on('unpipe', function() {
+        console.log("unpipe for "+cachePathTmp+", cleaning up");
+        cleanup({ws: 1, tmp: 1});
+      });
+      ws.on('close', function() {
+        if (!somethingWentWrong) {
+          try {
+            fs.renameSync(cachePathTmp, cachePath);
+            tinfo.cache.addFile(cacheFileName);
+          } catch (e) {
+            console.log("rename failed with "+e.code+" for "+cachePathTmp);
+          }
+        }
+      });
+      rs.pipe(ws);
+      return rs;
+    } else {
+      // byte range requested, don't write to cache
+      // TODO: figure out how to do both..
+      var doRange = new DoRange(options);
+      rs.pipe(doRange);
+      return doRange;
+    }
   }
-  return rs;
 };
 
 // stolen from Dropbox SDK..
