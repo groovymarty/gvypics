@@ -217,6 +217,7 @@ DoRange.prototype._transform = function(chunk, enc, next) {
 // Return read stream for file
 // If file is in cache return file stream, else request download
 File.prototype.readStream = function(options) {
+  options = options || {};
   var self = this;
   var tinfo = this.mime.tinfo;
   var cacheFileName = this.cacheFileName();
@@ -262,7 +263,7 @@ File.prototype.readStream = function(options) {
   } else {
     //console.log(this.id+" not in cache, downloading");
     rs = this.requestDownload();
-    if (!options.start) {
+    if (!options.start && (!options.end || options.end >= this.size - 1)) {
       // entire file requested, write to cache as it is read
       cachePathTmp = cachePath + "_tmp";
       ws = fs.createWriteStream(cachePathTmp, {flags: "wx"});
