@@ -179,9 +179,10 @@ app.get("/gvypics/vid/:id", function(req, res) {
               if (options.end >= file.size) {
                 options.end = file.size - 1;
               }
-              // if range is not entire file, set status to Partial Content
+              // if range is not entire file, set headers for byte range
               if (options.start !== 0 || options.end < (file.size - 1)) {
-                res.status(206);
+                res.status(206); //Partial Content
+                res.set("Content-Range", "bytes "+options.start+"-"+options.end+"/"+file.size);
                 len = options.end - options.start + 1;
               }
             }
