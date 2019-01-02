@@ -10,7 +10,7 @@ var finder = require("./finder.js");
 var auth = require("./auth.js");
 var metaChg = require("./metachg.js");
 var root = {};
-var initLoadAll = false;
+var initLoadAll = true; //mhs false for testing
 var cacheBaseDir = "./cache";
 
 if (!fs.existsSync(cacheBaseDir)) {
@@ -34,7 +34,7 @@ mydbx.filesGetMetadata({path: "/Pictures"}).then(function(dbxmeta) {
 
 var app = express();
 app.use(bodyParser.json());
-app.use(express.static("../gvyweb")); //mhs for testing
+//app.use(express.static("../gvyweb")); //mhs for testing
 
 app.get("/gvypics/ls", function(req, res) {
   Promise.resolve(true).then(function() {
