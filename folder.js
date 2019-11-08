@@ -131,9 +131,14 @@ Folder.prototype.update = function(recursive) {
       // set last update time
       self.lastUpdate = Date.now();
       if (recursive) {
-        return Promise.all(Object.keys(self.folders).map(function(id) {
-          return self.folders[id].update(true);
-        }));
+        // promise chain for sequential execution
+        var chain = Promise.resolve(true);
+        Object.keys(self.folders).forEach(function(id) {
+          chain = chain.then(function() {
+            return self.folders[id].update(true);
+          });
+        });
+        return chain;
       } else {
         // not recursive
         return true; //done
