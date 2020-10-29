@@ -1,8 +1,10 @@
 /node_modules
 .dropbox-access-token
+.space-access-key
 .users
 npm-debug.log
 package-lock.json
 gvypics.komodoproject
 /cache
 metajournal
+tmpfile
