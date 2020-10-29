@@ -1,14 +1,14 @@
 #!/usr/bin/env nodejs
 
-# this script synchronizes videos from Dropbox to the Digital Ocean space
-# periodically, it scans the Dropbox folders for videos
-# the first scan is a complete scan of all files/folders in Dropbox,
-# but subsequent scans use the continue feature to check for changes since last time.
-# for each video found, it checks to see if the same video exists in the space
-# if video is not there, or has changed, file is transferred from Dropbox to space
-# change detection is based on Dropbox rev number, which is stored in metadata in space
-# bucket name is "gvypics", key for each video is its groovymarty id
-# TODO: implement deletion
+// this script synchronizes videos from Dropbox to the Digital Ocean space
+// periodically, it scans the Dropbox folders for videos
+// the first scan is a complete scan of all files/folders in Dropbox,
+// but subsequent scans use the continue feature to check for changes since last time.
+// for each video found, it checks to see if the same video exists in the space
+// if video is not there, or has changed, file is transferred from Dropbox to space
+// change detection is based on Dropbox rev number, which is stored in metadata in space
+// bucket name is "gvypics", key for each video is its groovymarty id
+// TODO: implement deletion
 
 var fs = require("fs");
 var pic = require("./pic.js");
