@@ -212,7 +212,7 @@ function processVideo(parts, dbxmeta, mime) {
 			ws.on('close', function() {
 				if (!somethingWentWrong) {
 					// upload temp file to space
-					console.log("ws closed for "+parts.id);
+					console.log("uploading "+parts.id);
 					var params = {
 						Bucket: "gvypics",
 						Key: "vid/"+parts.id,
