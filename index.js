@@ -151,54 +151,12 @@ app.get("/gvypics/pic/:id", function(req, res) {
 // Return a video
 app.get("/gvypics/vid/:id", function(req, res) {
   Promise.resolve(true).then(function() {
-    // parse range header, if any
-    var range = req.get("range");
-    var options = {};
-    if (range) {
-      var mr = range.match(/^bytes\s*=\s*(\d+)\s*-\s*(\d*)$/);
-      if (mr) {
-        options.start = parseInt(mr[1]);
-        options.end = mr[2].length ? parseInt(mr[2]) : Infinity;
-      } else {
-        range = null; //can't parse range, ignore it
-      }
-    }
     var id = req.params.id;
     var parts = pic.parseFile(id);
     if (parts) {
       if (parts.type === "V") {
-        return finder.findFolder(parts).then(function(folder) {
-          return finder.findFile(folder, parts).then(function(file) {
-            var len = file.size;
-            if (range) {
-              // check for invalid range
-              if (options.start >= file.size) {
-                res.status(416).end(); //Requested Range Not Satisfiable
-                return true; //done
-              }
-              if (options.end >= file.size) {
-                options.end = file.size - 1;
-              }
-              // if range is not entire file, set headers for byte range
-              if (options.start !== 0 || options.end < (file.size - 1)) {
-                res.status(206); //Partial Content
-                res.set("Content-Range", "bytes "+options.start+"-"+options.end+"/"+file.size);
-                len = options.end - options.start + 1;
-              }
-            }
-            possibleDownload(req, res, file);
-            res.set("Content-Type", file.mime.name);
-            res.set("Content-Length", len);
-            res.set("Accept-Ranges", "bytes");
-            var rs = file.readStream(options);
-            // for videos, tell read stream to stop if our connection gets closed
-            req.on('close', function() {
-              rs.emit('stop');
-            });
-            rs.pipe(res);
-            return true; //done
-          });
-        });
+        res.redirect("http://gvypics.groovymarty.com/vid/"+parts.id);
+        return true;
       } else {
         throw new Error("Not a video: "+id);
       }
