@@ -155,7 +155,11 @@ app.get("/gvypics/vid/:id", function(req, res) {
     var parts = pic.parseFile(id);
     if (parts) {
       if (parts.type === "V") {
-        res.redirect("http://gvypics.groovymarty.com/vid/"+parts.id);
+        if (req.query.res) {
+          res.redirect("https://gvypics.groovymarty.com/vid/"+req.query.res+"/"+parts.id);
+        } else {
+          res.redirect("https://gvypics.groovymarty.com/vid/"+parts.id);          
+        }
         return true;
       } else {
         throw new Error("Not a video: "+id);
