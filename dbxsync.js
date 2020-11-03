@@ -7,7 +7,7 @@
 // for each video found, it checks to see if the same video exists in the space
 // if video is not there, or has changed, file is transferred from Dropbox to space
 // change detection is based on Dropbox rev number, which is stored in metadata in space
-// bucket name is "gvypics", key for each video is its groovymarty id
+// bucket name is "gvypics", key for each video is "vid/" followed by groovymarty id
 // TODO: implement deletion
 
 var fs = require("fs");
@@ -159,7 +159,7 @@ function processVideo(parts, dbxmeta, mime) {
 	// get metadata for existing file, if any
 	var params = {
 		Bucket: "gvypics",
-		Key: parts.id
+		Key: "vid/"+parts.id
 	};
 	s3.headObject(params, (err, data) => {
 		// got metadata and it matches dropbox id and rev?
@@ -215,7 +215,7 @@ function processVideo(parts, dbxmeta, mime) {
 					console.log("ws closed for "+parts.id);
 					var params = {
 						Bucket: "gvypics",
-						Key: parts.id,
+						Key: "vid/"+parts.id,
 						Body: fs.createReadStream("tmpfile"),
 						ACL: "public-read",
 						ContentType: mime.name,
