@@ -156,9 +156,9 @@ app.get("/gvypics/vid/:id", function(req, res) {
     if (parts) {
       if (parts.type === "V") {
         if (req.query.res) {
-          res.redirect("https://gvypics.groovymarty.com/vid/"+req.query.res+"/"+parts.id);
+          res.redirect("https://gvypics.nyc3.digitaloceanspaces.com/vid/"+req.query.res+"/"+parts.id);
         } else {
-          res.redirect("https://gvypics.groovymarty.com/vid/"+parts.id);          
+          res.redirect("https://gvypics.nyc3.digitaloceanspaces.com/vid/"+parts.id);          
         }
         return true;
       } else {
