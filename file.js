@@ -26,6 +26,8 @@ var typeInfo = {
     cacheDirName: "videos",
     cacheMaxFiles: 50,
     extToMime: {
+      ".mpg": {name: "video/mpeg"},
+      ".mpeg": {name: "video/mpeg"},
       ".mp4": {name: "video/mp4"},
       ".mov": {name: "video/quicktime"},
       ".avi": {name: "video/x-msvideo"},
