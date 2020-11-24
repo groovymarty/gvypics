@@ -77,7 +77,7 @@ function processHqFile(dirPath, name) {
       // get metadata for existing file, if any
       var params = {
         Bucket: "gvypics",
-        Key: "vid/hq/"+parts.id
+        Key: "vid/_hq/"+parts.id
       };
       s3.headObject(params, (err, data) => {
         // got metadata?
@@ -107,7 +107,7 @@ function processHqFile(dirPath, name) {
 					console.log("uploading "+parts.id);
 					var params = {
 						Bucket: "gvypics",
-						Key: "vid/hq/"+parts.id,
+						Key: "vid/_hq/"+parts.id,
 						Body: fs.createReadStream(filePath),
 						ACL: "public-read",
 						ContentType: mime.name,
