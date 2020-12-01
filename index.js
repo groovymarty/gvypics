@@ -12,6 +12,8 @@ var metaChg = require("./metachg.js");
 var root = {};
 var initLoadAll = true; //mhs false for testing
 var cacheBaseDir = "./cache";
+var cdn = "gvypics.groovymarty.com";
+//var cdn = "gvypics.nyc3.digitaloceanspaces.com";
 
 if (!fs.existsSync(cacheBaseDir)) {
   fs.mkdirSync(cacheBaseDir);
@@ -156,9 +158,9 @@ app.get("/gvypics/vid/:id", function(req, res) {
     if (parts) {
       if (parts.type === "V") {
         if (req.query.res) {
-          res.redirect("https://gvypics.nyc3.digitaloceanspaces.com/vid/_"+req.query.res+"/"+parts.id);
+          res.redirect("https://"+cdn+"/vid/_"+req.query.res+"/"+parts.id);
         } else {
-          res.redirect("https://gvypics.nyc3.digitaloceanspaces.com/vid/"+parts.id);          
+          res.redirect("https://"+cdn+"/vid/"+parts.id);          
         }
         return true;
       } else {
