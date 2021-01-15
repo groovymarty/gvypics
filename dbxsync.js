@@ -19,7 +19,7 @@ var mydbx = require("./mydbx.js");
 var aws = require("aws-sdk");
 var request = require("request");
 
-var spaceAccessKeyPath = path.join(os.homepath(), ".space-access-key");
+var spaceAccessKeyPath = path.join(os.homedir(), ".space-access-key");
 var options = JSON.parse(fs.readFileSync(spaceAccessKeyPath));
 options.endpoint = new aws.Endpoint("nyc3.digitaloceanspaces.com");
 var s3 = new aws.S3(options);
