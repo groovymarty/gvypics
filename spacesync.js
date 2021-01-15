@@ -32,20 +32,20 @@ var chain = Promise.resolve(true);
 // scan directories recursively
 function scanDir(dirPath) {
   var dir = fs.opendirSync(dirPath);
-	var isHq = path.basename(dirPath) == "_hq";
-	while (true) {
-		var dirent = dir.readSync();
-		if (!dirent) {
-			break;
-		}
-		if (dirent.isDirectory()) {
-			if (dirent.name != "." && dirent.name != "..") {
-				scanDir(path.join(dirPath, dirent.name));
-			}
-		} else if (isHq && dirent.isFile()) {
-			processHqFile(dirPath, dirent.name);
-		}
-	}
+  var isHq = path.basename(dirPath) == "_hq";
+  while (true) {
+    var dirent = dir.readSync();
+    if (!dirent) {
+      break;
+    }
+    if (dirent.isDirectory()) {
+      if (dirent.name != "." && dirent.name != "..") {
+        scanDir(path.join(dirPath, dirent.name));
+      }
+    } else if (isHq && dirent.isFile()) {
+      processHqFile(dirPath, dirent.name);
+    }
+  }
   dir.closeSync();
 }
 
@@ -64,8 +64,8 @@ function processHqFile(dirPath, name) {
   var mtimeMs = Math.floor(stats.mtimeMs);
   var parts = pic.parseFile(name);
   var tinfo = File.typeInfo[parts.type];
-	var mime = tinfo && tinfo.extToMime[parts.ext];
-	if (parts.id && mime) {
+  var mime = tinfo && tinfo.extToMime[parts.ext];
+  if (parts.id && mime) {
     console.log("found", parts.id);
     // add async action to promise chain, so they will be done serially
     chain = chain.then(() => {
@@ -103,26 +103,26 @@ function processHqFile(dirPath, name) {
         if (same) {
           console.log("skipping", parts.id);
           promResolve(true);
-				} else {
-					console.log("uploading "+parts.id);
-					var params = {
-						Bucket: "gvypics",
-						Key: "vid/_hq/"+parts.id,
-						Body: fs.createReadStream(filePath),
-						ACL: "public-read",
-						ContentType: mime.name,
-						Metadata: {mtimems: ""+mtimeMs} //metadata tags always lowercase
-					};
-					s3.upload(params, err => {
-						if (err) {
-							console.log("upload failed for "+parts.id, err);
-							promReject(false);
-						} else {
-							console.log("upload successful for "+parts.id);
-							promResolve(true);
-						}
-					}).on('httpUploadProgress', evt => console.log(evt));
-				}
+        } else {
+          console.log("uploading "+parts.id);
+          var params = {
+            Bucket: "gvypics",
+            Key: "vid/_hq/"+parts.id,
+            Body: fs.createReadStream(filePath),
+            ACL: "public-read",
+            ContentType: mime.name,
+            Metadata: {mtimems: ""+mtimeMs} //metadata tags always lowercase
+          };
+          s3.upload(params, err => {
+            if (err) {
+              console.log("upload failed for "+parts.id, err);
+              promReject(false);
+            } else {
+              console.log("upload successful for "+parts.id);
+              promResolve(true);
+            }
+          }).on('httpUploadProgress', evt => console.log(evt));
+        }
       });
       // catch all failures to keep chain going
       return promise.catch(() => {});
