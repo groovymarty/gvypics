@@ -11,13 +11,16 @@
 // TODO: implement deletion
 
 var fs = require("fs");
+var os = require("os");
+var path = require("path");
 var pic = require("./pic.js");
 var File = require("./file.js");
 var mydbx = require("./mydbx.js");
 var aws = require("aws-sdk");
 var request = require("request");
 
-var options = JSON.parse(fs.readFileSync(".space-access-key"));
+var spaceAccessKeyPath = path.join(os.homepath(), ".space-access-key");
+var options = JSON.parse(fs.readFileSync(spaceAccessKeyPath));
 options.endpoint = new aws.Endpoint("nyc3.digitaloceanspaces.com");
 var s3 = new aws.S3(options);
 
