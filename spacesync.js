@@ -1,6 +1,8 @@
 #!/usr/bin/env nodejs
 
 // this script synchronizes videos from local _hq folders to the Digital Ocean space
+// intended for use on Windows computer, working directory should be My Pictures
+
 // it scans the Pictures directory tree for video files inside _hq folders
 // for each of these, it sees if corresponding file exists in gvypics space
 // the key string is vid/hq/ followed by groovy id of video file
@@ -18,12 +20,14 @@
 // TODO: implement deletion.  meanwhile delete manually using CyberDuck or DO Manage Spaces
 
 var fs = require("fs");
+var os = require("os");
 var path = require("path");
 var aws = require("aws-sdk");
 var pic = require("./pic.js");
 var File = require("./file.js");
 
-var options = JSON.parse(fs.readFileSync(".space-access-key"));
+var spaceAccessKeyPath = path.join(os.homedir(), ".space-access-key");
+var options = JSON.parse(fs.readFileSync(spaceAccessKeyPath));
 options.endpoint = new aws.Endpoint("nyc3.digitaloceanspaces.com");
 var s3 = new aws.S3(options);
 
@@ -31,6 +35,7 @@ var chain = Promise.resolve(true);
 
 // scan directories recursively
 function scanDir(dirPath) {
+  console.log("scanning", dirPath); //mhs temp
   var dir = fs.opendirSync(dirPath);
   var isHq = path.basename(dirPath) == "_hq";
   while (true) {
@@ -132,5 +137,5 @@ function processHqFile(dirPath, name) {
   }
 }
 
-scanDir("\\Users\\msaus\\Pictures");
+scanDir(".");
 chain.then(() => console.log("done"));
