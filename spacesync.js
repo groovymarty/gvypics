@@ -6,7 +6,7 @@
 
 // it scans the Pictures directory tree for video files inside _hq folders
 // for each of these, it sees if corresponding file exists in gvypics space
-// the key string is vid/hq/ followed by groovy id of video file
+// the key string is vid/_hq/ followed by groovy id of video file
 // if not found or file has changed, new file is uploaded to space
 // change detection is based on file size and last mod timestamp
 // last mod timestamp is from the Windows file stats, and is stored with
@@ -103,8 +103,8 @@ function processHqFile(dirPath, name) {
             same = false;
           }
           else if (!data.Metadata.filename || data.Metadata.filename != name) {
-            console.log("filename difference for", parts.id, ", local is", filename,
-                        "remote is", data.Metadata.filename);
+            console.log("filename difference for", parts.id, ", local is", name,
+                        "remote is", data.Metadata.filename || "");
             same = false;
           }
         } else {
