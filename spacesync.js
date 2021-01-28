@@ -2,6 +2,7 @@
 
 // this script synchronizes videos from local _hq folders to the Digital Ocean space
 // intended for use on Windows computer, working directory should be My Pictures
+// this script only uploads files (local computer to space)
 
 // it scans the Pictures directory tree for video files inside _hq folders
 // for each of these, it sees if corresponding file exists in gvypics space
@@ -10,6 +11,7 @@
 // change detection is based on file size and last mod timestamp
 // last mod timestamp is from the Windows file stats, and is stored with
 // file in metadata in the space.  LastModified time from Digital Ocean is not used.
+// original Windows file name is also stored in metadata
 
 // why is this script needed, since we have the Dropbox backup process,
 // and the dbxsync script which copies videos from dbx to the space?
@@ -80,7 +82,7 @@ function processHqFile(dirPath, name) {
         promReject = reject;
       });
       // get metadata for existing file, if any
-      var params = {
+      const params = {
         Bucket: "gvypics",
         Key: "vid/_hq/"+parts.id
       };
@@ -100,6 +102,11 @@ function processHqFile(dirPath, name) {
                         "remote size is", data.ContentLength);
             same = false;
           }
+          else if (!data.Metadata.filename || data.Metadata.filename != name) {
+            console.log("filename difference for", parts.id, ", local is", filename,
+                        "remote is", data.Metadata.filename);
+            same = false;
+          }
         } else {
           // file doesn't exist
           console.log("failed to get metadata for", parts.id);
@@ -110,13 +117,16 @@ function processHqFile(dirPath, name) {
           promResolve(true);
         } else {
           console.log("uploading "+parts.id);
-          var params = {
+          const params = {
             Bucket: "gvypics",
             Key: "vid/_hq/"+parts.id,
             Body: fs.createReadStream(filePath),
             ACL: "public-read",
             ContentType: mime.name,
-            Metadata: {mtimems: ""+mtimeMs} //metadata tags always lowercase
+            Metadata: {
+              mtimems: ""+mtimeMs,  //metadata tags always lowercase
+              filename: name
+            }
           };
           s3.upload(params, err => {
             if (err) {
