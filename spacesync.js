@@ -68,7 +68,7 @@ function scanDir(dirPath) {
 function processHqFile(dirPath, name) {
   var filePath = path.join(dirPath, name);
   var stats = fs.statSync(filePath);
-  var mtimeMs = Math.floor(stats.mtimeMs);
+  var mtimeMs = Math.round(stats.mtimeMs);
   var parts = pic.parseFile(name);
   var tinfo = File.typeInfo[parts.type];
   var mime = tinfo && tinfo.extToMime[parts.ext];
