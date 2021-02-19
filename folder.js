@@ -263,13 +263,16 @@ Folder.prototype.freshUpdate = function() {
 // For root and alt folders all numbers are 0, so this gives sort by id
 // All other folders contain pictures, videos or child folders with numbers
 // If two pictures have same number (like D17M-1 and D17M-1A), sort by id will give right result
-function sortContainer(container) {
+function getSortedContainerKeys(container) {
   return Object.keys(container).sort(function(id1, id2) {
     return (container[id1].num - container[id2].num) || id1.localeCompare(id2);
   });
 }
 
-Folder.prototype.represent = function() {
+// Return representation of folder
+// Options: vo, video only
+Folder.prototype.represent = function(options) {
+  var options = options || {};
   var self = this;
   var myFolders;
   // get the folders we want to reveal
@@ -285,19 +288,23 @@ Folder.prototype.represent = function() {
     // no alt folders so just show the regular ones
     myFolders = this.folders;
   }
+  // get pictures array unless video only
+  var myPictures = options.vo ? [] : this.pictures;
+  // get videos array
+  var myVideos = this.videos;
   // The root folder's name is "/", id is "", and parent is "0"
   // Note "0" is an illegal id value
   var rep = {
     name: this.name,
     id: this.id,
     parent: (this.altParent || this.parent || {id: "0"}).id,
-    folders: sortContainer(myFolders),
-    pictures: sortContainer(this.pictures),
-    videos: sortContainer(this.videos)
+    folders: getSortedContainerKeys(myFolders),
+    pictures: getSortedContainerKeys(myPictures),
+    videos: getSortedContainerKeys(myVideos)
   };
   // gather names of all items
   rep.names = {};
-  [myFolders, this.pictures, this.videos].forEach(function(container) {
+  [myFolders, myPictures, myVideos].forEach(function(container) {
     Object.keys(container).forEach(function(id) {
       rep.names[id] = container[id].name;
     });    
@@ -307,7 +314,18 @@ Folder.prototype.represent = function() {
     if (self[whichFile]) {
       // folder has contents.json or meta.json file
       return self[whichFile].getJson().then(function(obj) {
-        rep[whichFile] = obj;
+        // if video only, filter metadata
+        if (options.vo && whichFile === 'meta') {
+          var filtMeta = {};
+          Object.keys(obj).forEach(id => {
+            if (id in myVideos) {
+              filtMeta[id] = obj[id];
+            }
+          });
+          rep[whichFile] = filtMeta;
+        } else {
+          rep[whichFile] = obj;
+        }
         return true; //done with file
       });
     } else {

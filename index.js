@@ -56,7 +56,8 @@ app.get("/gvypics/ls", function(req, res) {
 app.get("/gvypics/ls/:id", function(req, res) {
   Promise.resolve(true).then(function() {
     return finder.parseAndFindFolder(req.params.id, req.query).then(function(folder) {
-      return folder.represent().then(function(rep) {
+      var options = {vo: !!req.query.vo};
+      return folder.represent(options).then(function(rep) {
         res.json(rep);
         return true; //done
       });
