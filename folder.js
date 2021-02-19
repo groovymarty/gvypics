@@ -482,4 +482,14 @@ Folder.prototype.findFile = function(id, type, tryUpdate) {
   }
 };
 
+Folder.prototype.findVideoFolders = function(resultArray) {
+  if (Object.keys(this.videos).length) {
+    resultArray.push(this.id);
+  }
+  Object.keys(this.folders).forEach(childId => {
+    this.folders[childId].findVideoFolders(resultArray);
+  });
+  return resultArray;
+};
+
 module.exports = Folder;

@@ -62,6 +62,10 @@ function parseAndFind(id) {
   }
 }
 
+function findVideoFolders() {
+  return root.findVideoFolders([]);
+}
+
 module.exports = {
   setRootFolder: setRootFolder,
   getRootFolder: getRootFolder,
@@ -69,5 +73,6 @@ module.exports = {
   findFile: findFile,
   parseAndFindFolder: parseAndFindFolder,
   parseAndFindFile: parseAndFindFile,
-  parseAndFind: parseAndFind
+  parseAndFind: parseAndFind,
+  findVideoFolders: findVideoFolders
 };

@@ -68,6 +68,19 @@ app.get("/gvypics/ls/:id", function(req, res) {
   });
 });
 
+// List all folders with videos
+app.get("/gvypics/lsv", function(req, res) {
+  Promise.resolve(true).then(function() {
+    res.json({
+      folders: finder.findVideoFolders()
+    });
+    return true; //done
+  })
+  .catch(function(error) {
+    res.status(404).send(pic.getErrorMessage(error));
+  });
+});
+
 // Return contents.json or mime.json of specified folder
 // Not really needed because "ls" also returns contents and metadata, but handy for testing
 function getJsonFile(req, res, whichFile) {
