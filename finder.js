@@ -63,7 +63,7 @@ function parseAndFind(id) {
 }
 
 function findVideoFolders() {
-  return root.findVideoFolders([]);
+  return root.findVideoFolders();
 }
 
 module.exports = {

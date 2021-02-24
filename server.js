@@ -10,7 +10,8 @@ var finder = require("./finder.js");
 var auth = require("./auth.js");
 var metaChg = require("./metachg.js");
 var root = {};
-var initLoadAll = true; //mhs false for testing
+var testing = false;
+var initLoadAll = !testing;
 var cacheBaseDir = "./cache";
 var cdn = "gvypics.groovymarty.com";
 //var cdn = "gvypics.nyc3.digitaloceanspaces.com";
@@ -36,7 +37,9 @@ mydbx.filesGetMetadata({path: "/Pictures"}).then(function(dbxmeta) {
 
 var app = express();
 app.use(bodyParser.json());
-//app.use(express.static("../gvyweb")); //mhs for testing
+if (testing) {
+  app.use(express.static("../gvyweb"));
+}
 
 app.get("/gvypics/ls", function(req, res) {
   Promise.resolve(true).then(function() {
@@ -71,9 +74,7 @@ app.get("/gvypics/ls/:id", function(req, res) {
 // List all folders with videos
 app.get("/gvypics/lsv", function(req, res) {
   Promise.resolve(true).then(function() {
-    res.json({
-      folders: finder.findVideoFolders()
-    });
+    res.json(finder.findVideoFolders());
     return true; //done
   })
   .catch(function(error) {

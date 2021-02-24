@@ -482,14 +482,16 @@ Folder.prototype.findFile = function(id, type, tryUpdate) {
   }
 };
 
-Folder.prototype.findVideoFolders = function(resultArray) {
+Folder.prototype.findVideoFolders = function(result) {
+  result = result || {folders: [], names: {}};
   if (Object.keys(this.videos).length) {
-    resultArray.push(this.id);
+    result.folders.push(this.id);
+    result.names[this.id] = this.name;
   }
   Object.keys(this.folders).forEach(childId => {
-    this.folders[childId].findVideoFolders(resultArray);
+    this.folders[childId].findVideoFolders(result);
   });
-  return resultArray;
+  return result;
 };
 
 module.exports = Folder;
