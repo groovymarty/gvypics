@@ -1,6 +1,7 @@
 #!/usr/bin/env nodejs
 var fs = require('fs');
 var express = require('express');
+var cors = require('cors');
 var bodyParser = require('body-parser');
 var pic = require("./pic.js");
 var mydbx = require("./mydbx.js");
@@ -36,6 +37,7 @@ mydbx.filesGetMetadata({path: "/Pictures"}).then(function(dbxmeta) {
 });
 
 var app = express();
+app.use(cors());
 app.use(bodyParser.json());
 if (testing) {
   app.use(express.static("../gvyweb"));
