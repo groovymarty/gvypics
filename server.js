@@ -1,7 +1,7 @@
 #!/usr/bin/env nodejs
 var fs = require('fs');
 var express = require('express');
-var cors = require('cors');
+var axios = require('axios')
 var bodyParser = require('body-parser');
 var pic = require("./pic.js");
 var mydbx = require("./mydbx.js");
@@ -37,7 +37,6 @@ mydbx.filesGetMetadata({path: "/Pictures"}).then(function(dbxmeta) {
 });
 
 var app = express();
-app.use(cors());
 app.use(bodyParser.json());
 if (testing) {
   app.use(express.static("../gvyweb"));
@@ -180,6 +179,36 @@ app.get("/gvypics/vid/:id", function(req, res) {
           res.redirect("https://"+cdn+"/vid/"+parts.id);          
         }
         return true;
+      } else {
+        throw new Error("Not a video: "+id);
+      }
+    } else {
+      throw new Error("Parse failed for "+id);
+    }
+  })
+  .catch(function(error) {
+    res.status(404).send(pic.getErrorMessage(error));
+  });
+});
+
+// Test if a video exists
+app.get("/gvypics/testvid/:id", function(req, res) {
+  Promise.resolve(true).then(function() {
+    var id = req.params.id;
+    var parts = pic.parseFile(id);
+    if (parts) {
+      if (parts.type === "V") {
+        let url;
+        if (req.query.res) {
+          url = "https://"+cdn+"/vid/_"+req.query.res+"/"+parts.id;
+        } else {
+          url = "https://"+cdn+"/vid/"+parts.id;
+        }
+        // do HEAD request to see if video exists
+        // if success return empty 200 response, else 404
+        return axios.head(url).then(function() {
+          res.end();
+        });
       } else {
         throw new Error("Not a video: "+id);
       }
