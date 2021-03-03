@@ -107,6 +107,11 @@ function processHqFile(dirPath, name) {
                         "remote is", data.Metadata.filename || "");
             same = false;
           }
+          else if (data.ContentType != mime.name) {
+            console.log("mime type difference for", parts.id, ", local is", mime.name,
+                        "remote is", data.ContentType || "");
+            same = false;
+          }
         } else {
           // file doesn't exist
           console.log("failed to get metadata for", parts.id);
