@@ -35,6 +35,7 @@ function updateFolder(path, cursor) {
   function processListFolderResult(result) {
     // chain for sequential execution of promises
     var chain = Promise.resolve(true);
+    //console.log(result.entries.length, "entries");
     result.entries.forEach(function(entry) {
       var parts;
       if (entry['.tag'] === "folder") {
@@ -89,6 +90,7 @@ function updateFolder(path, cursor) {
     } else {
       // list folder is complete, return next cursor as final result of promise chain
       chain = chain.then(function() {
+        //console.log("final result.cursor is", result.cursor)
         return result.cursor;
       });
     }
@@ -116,9 +118,11 @@ function doUpdateFolder() {
     .then(() => {
       if (nextCursor) {
         // this dbx request will block until change happens or timeout
+        //console.log("longpoll, cursor is", nextCursor);
         return mydbx.filesListFolderLongpoll({cursor: nextCursor, timeout: 30}).catch(() => 0);
       } else {
         // we don't have a cursor, so fixed delay then try again
+        //console.log("delay 30")
         return setTimeout(30000);
       }
     })
