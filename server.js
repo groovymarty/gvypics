@@ -23,6 +23,7 @@ if (!fs.existsSync(cacheBaseDir)) {
 File.setCacheBaseDir(cacheBaseDir);
 
 mydbx.filesGetMetadata({path: "/Pictures"}).then(function(dbxmeta) {
+  dbxmeta = dbxmeta.result;
   dbxmeta.name = "/";
   root = new Folder(null, dbxmeta, {id: ""});
   finder.setRootFolder(root);

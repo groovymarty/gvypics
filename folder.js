@@ -40,6 +40,7 @@ Folder.prototype.update = function(recursive) {
   }
   
   function processListFolderResult(result) {
+    result = result.result;
     result.entries.forEach(function(entry) {
       var parts;
       if (entry['.tag'] === "folder") {
