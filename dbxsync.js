@@ -33,6 +33,7 @@ function updateFolder(path, cursor) {
   // this function processes the result of fileListFolder or fileListFolderContinue
   // returns promise to process all videos found
   function processListFolderResult(result) {
+    result = result.result
     // chain for sequential execution of promises
     var chain = Promise.resolve(true);
     //console.log(result.entries.length, "entries");
@@ -123,7 +124,7 @@ function doUpdateFolder() {
       } else {
         // we don't have a cursor, so fixed delay then try again
         //console.log("delay 30")
-        return setTimeout(30000);
+        return new Promise(resolve => setTimeout(() => resolve(), 30000));
       }
     })
     .then(doUpdateFolder);

@@ -5,4 +5,5 @@ var Dropbox = require('dropbox');
 var accessTokenPath = path.join(os.homedir(), ".dropbox-access-token");
 var accessToken = fs.readFileSync(accessTokenPath, "utf8");
 var mydbx = new Dropbox.Dropbox({ accessToken: accessToken });
+mydbx.getAccessToken = function() {return accessToken;};
 module.exports = mydbx;
